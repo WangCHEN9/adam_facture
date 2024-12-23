@@ -30,11 +30,15 @@ class Article_Info:
             if closest_match:
                 closest_article = closest_match[0]
                 closest_code = df.loc[df['ARTICLE'] == closest_article, target_col].values[0]
-                logger.warning(f"No exact match found for '{article_name}'. Closest match: '{closest_article}' with code: '{closest_code}'")
+                logger.warning(f"No exact match found for '{article_name}'. Closest match: '{closest_article}' with {target_col}='{closest_code}'")
                 return closest_code
             else:
+                for possible_match in df['ARTICLE']:
+                    if article_name.startswith(possible_match) or possible_match.startswith(article_name):
+                        closest_code = df.loc[df['ARTICLE'] == possible_match, target_col].values[0]
+                        logger.warning(f"No exact match found for '{article_name}'. Closest match: '{possible_match}' with {target_col}='{closest_code}'")
+                        return closest_code
                 logger.error(f"No close matches found for '{article_name}'")
-                return None
 
 if __name__ == "__main__":
     source_excel = Path(r"data/DONNEES DOUANE PYTHON.xlsx")
