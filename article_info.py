@@ -22,7 +22,7 @@ class Article_Info:
         related_code = df.loc[df['ARTICLE'] == article_name, target_col].values
 
         if related_code.size > 0:
-            logger.info(f"The {target_col} for {article_name} is {related_code[0]}")
+            logger.debug(f"The {target_col} for {article_name} is {related_code[0]}")
             return related_code[0]
         else:
             # Find the closest match
@@ -35,7 +35,6 @@ class Article_Info:
             else:
                 logger.error(f"No close matches found for '{article_name}'")
                 return None
-
 
 if __name__ == "__main__":
     source_excel = Path(r"data/DONNEES DOUANE PYTHON.xlsx")
