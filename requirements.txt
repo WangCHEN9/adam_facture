@@ -1,0 +1,6 @@
+black
+pdfplumber
+xmlschema
+pydantic
+loguru
+lxml
