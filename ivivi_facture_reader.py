@@ -40,7 +40,7 @@ class IviviFactureReader:
                     if not df_item.empty:
                         dfs.append(df_item)
                 except ValueError as e:
-                    logger.info(f"Error while processing page : {page.page_number}")
+                    logger.error(f"Error while processing page : {page.page_number}, error: {e}")
                     continue
             df = pd.concat(dfs, axis=0)
             envelope = self._get_envelope(df=df)
@@ -69,7 +69,8 @@ class IviviFactureReader:
         metadata_dict = None
         df_item = pd.DataFrame([])
         for table in tables:
-            raw_data = self._remove_empty_items(table.extract())
+            # loop over tables to get df_item and metadata_dict
+            raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
             if not metadata_dict:
                 metadata_dict = self._get_metadata_dict(raw_data)
                 if metadata_dict:
@@ -79,6 +80,7 @@ class IviviFactureReader:
             if df_item.empty:
                 df_item = self._get_item_df(raw_data)
 
+        # use previous page's metadata if current page has previous page Numéro
         if is_first_page:
             if metadata_dict:
                 self._previous_page_metadata = metadata_dict
@@ -124,9 +126,8 @@ class IviviFactureReader:
         array = np.array(raw_data)
         if array.shape == (2, 6):
             if raw_data[0] == item_to_match:
-                number_of_items = self._get_number_of_items(raw_data[1])
                 result_dict = dict(zip(raw_data[0], raw_data[1]))
-                data = {x: y.split("\n")[:number_of_items] for x, y in result_dict.items()}
+                data = self._prepare_data_for_item_df(result_dict=result_dict, raw_1_data=raw_data[1])
                 df = pd.DataFrame(data)
                 numeric_columns = ['Qté', 'P.U. HT', 'Montant HT', 'TVA']
                 for col in numeric_columns:
@@ -136,9 +137,27 @@ class IviviFactureReader:
                 return df
         return pd.DataFrame({i: [] for i in item_to_match}) # return empty df
 
-    def _get_number_of_items(self, raw_1_data: List) -> List:
+    def _get_index_of_items(self, raw_1_data: List) -> List:
         codes = raw_1_data[0].split("\n")
-        return len(codes)
+        codes_indices = [index for index, value in enumerate(codes) if value is not None]
+        tvas = raw_1_data[-2].split("\n")   # col name = 'Montant HT'
+        tva_indices = []
+        for index, value in enumerate(tvas):
+            if value is not None:
+                if value != "0,00":
+                    tva_indices.append(index)
+        return (codes_indices, tva_indices)
+
+    def _prepare_data_for_item_df(self, result_dict, raw_1_data) -> Dict:
+        (codes_indices, tva_indices) = self._get_index_of_items(raw_1_data)
+        output = {}
+        for x, y in result_dict.items():
+            y_raw_list = y.split("\n")
+            if x == "Code":
+                output[x] = [y_raw_list[i] for i in codes_indices]
+            else:
+                output[x] = [y_raw_list[i] for i in tva_indices]
+        return output
 
     def _get_chars_only(self, input_str:str) -> str:
         if input_str:
@@ -174,23 +193,31 @@ class IviviFactureReader:
                     regionCode="93",
                 )
                 output_list.append(item)
+            else:
+                logger.error(f"Error while creating item for {data}, index: {index}")
         return output_list
 
     def _get_declarations(self, df:pd.DataFrame) -> List[Declaration_unit]:
-        metadata_dict = df.iloc[0]
-        day, month, year = metadata_dict["Date"].split(r"/")
-        
-        declaration = Declaration_unit(
-            declarationId = metadata_dict["Numéro"][-6:],
-            referencePeriod = f"{year}-{month}",
-            PSIId = self.party.partyId,
-            Function = Function(functionCode="O"),
-            declarationTypeCode = self.declarationTypeCode,
-            flowCode = "D",
-            currencyCode = "EUR",
-            Item = self._get_items(df=df)
-        )
-        return [declaration]
+
+        has_no_nulls = not df['Numéro'].isnull().any()
+        if not has_no_nulls:
+            raise ValueError(f"Got df with null value in column Numéro")    # make sure Numéro is not empty
+        declarations = []
+        for _, group_data in df.groupby("Numéro"):     # each facture is 1 declaration
+            metadata_dict = group_data.iloc[0]
+            _, month, year = metadata_dict["Date"].split(r"/")
+            declaration = Declaration_unit(
+                declarationId = metadata_dict["Numéro"][-6:],
+                referencePeriod = f"{year}-{month}",
+                PSIId = self.party.partyId,
+                Function = Function(functionCode="O"),
+                declarationTypeCode = self.declarationTypeCode,
+                flowCode = "D",
+                currencyCode = "EUR",
+                Item = self._get_items(df=group_data)
+            )
+            declarations.append(declaration)
+        return declarations
 
 
     def _get_cn8(self, article_name:str) -> CN8:
