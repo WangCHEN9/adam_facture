@@ -82,10 +82,6 @@ def main():
                 st.error(f"Error while creating xml file")
 
             if log_file_path.exists():
-                with open(log_file_path, "r") as f:
-                    log_lines = f.readlines()
-                    last_5_lines = log_lines[-5:] if len(log_lines) >= 5 else log_lines
-                    st.text("\n".join(last_5_lines))
                 with open(log_file_path, "rb") as f:
                     st.download_button(
                         label="Download Log",
@@ -93,6 +89,10 @@ def main():
                         file_name=log_file_path.name,
                         mime="text/plain"
                     )
+                with open(log_file_path, "r") as f:
+                    log_lines = f.readlines()
+                    last_3_lines = log_lines[-3:] if len(log_lines) >= 5 else log_lines
+                    st.warning("\n".join(last_3_lines))
             else:
                 st.error(f"Error while getting log file")
 
