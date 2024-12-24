@@ -6,7 +6,15 @@ from loguru import logger
 import shutil
 
 # Streamlit App
-def main():
+def main(output_folder_path, log_folder_path):
+
+    @st.cache_resource
+    def configure_logging(log_file_path):
+        # Clean up existing log file
+        if log_file_path.exists():
+            log_file_path.unlink()
+        logger.add(log_file_path, level="INFO")
+
     st.title("PDF to XML Processor")
     st.write("Upload a PDF file to process and generate XML & logs.")
 
@@ -18,13 +26,6 @@ def main():
         "IVIVI": IviviFactureReader,
     }
     process_func = func_mapping[company_name]
-
-    # Set up paths
-    output_folder_path = Path("output")
-    output_folder_path.mkdir(parents=True, exist_ok=True)
-    
-    log_folder_path = output_folder_path / "log"
-    log_folder_path.mkdir(parents=True, exist_ok=True)
 
     article_info_excel = Path("data/DONNEES DOUANE PYTHON.xlsx")
 
@@ -42,19 +43,12 @@ def main():
         with temp_pdf_path.open("wb") as f:
             shutil.copyfileobj(uploaded_file, f)
 
-        log_file_path = log_folder_path / f"{temp_pdf_path.stem}.log"
-
-        # Clean up existing log file
-        if log_file_path.exists():
-            log_file_path.unlink()
-
-        # Configure logger
-        logger.add(log_file_path, level="INFO")
-
         # Process the PDF
         st.write("Processing the PDF... It will take few minutes")
         try:
             xml_file_path = output_folder_path / f"{temp_pdf_path.stem}.xml"
+            log_file_path = log_folder_path / f"{temp_pdf_path.stem}.log"
+
             reader = process_func(
                 pdf_path=temp_pdf_path, 
                 article_info=article_info, 
@@ -63,6 +57,7 @@ def main():
             if not st.session_state["process_done"]:
                 logger.debug(f"start to process, as session_state process_done: {st.session_state['process_done']}")
                 with st.status("Running"):
+                    configure_logging(log_file_path)
                     reader.run()
                     st.session_state["process_done"] = True
 
@@ -84,7 +79,7 @@ def main():
                     st.download_button(
                         label="Download Log",
                         data=f,
-                        file_name=log_file_path.name,
+                        file_name=f"{xml_file_path.stem}.log",
                         mime="text/plain"
                     )
                 st.warning(f"Please make sure, you download the log, and check if there are any warnings & errors")
@@ -98,4 +93,12 @@ def main():
             logger.exception("An error occurred during processing.")
 
 if __name__ == "__main__":
-    main()
+        
+    # Set up paths
+    output_folder_path = Path("output")
+    output_folder_path.mkdir(parents=True, exist_ok=True)
+
+    log_folder_path = output_folder_path / "log"
+    log_folder_path.mkdir(parents=True, exist_ok=True)
+
+    main(output_folder_path, log_folder_path)
