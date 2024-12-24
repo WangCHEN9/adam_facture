@@ -96,7 +96,7 @@ def main():
             else:
                 st.error(f"Error while getting log file")
 
-            st.success("Processing complete.")
+            st.success("Processing complete, Please refresh page if you want process another PDF file!")
 
         except Exception as e:
             st.error(f"An error occurred: {e}")
