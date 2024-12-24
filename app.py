@@ -34,6 +34,10 @@ def main():
     # File uploader
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
+    @st.cache_data
+    def get_result(process_obj):
+        return process_obj.get_instat()
+
     if uploaded_file is not None:
         # Save the uploaded file to a temporary location
         temp_pdf_path = output_folder_path / uploaded_file.name
@@ -52,14 +56,16 @@ def main():
         # Process the PDF
         st.write("Processing the PDF... It will take few minutes")
         try:
-
-            ivivi_reader = process_func(
+            reader = process_func(
                 pdf_path=temp_pdf_path, 
                 article_info=article_info, 
                 output_folder_path=output_folder_path
             )
             with st.status("Running"):
-                ivivi_reader.run()
+                instat = get_result(reader)
+            instat.export_to_xml(output_xml_path=instat.output_xml_path, party_tag=instat.party_tag)
+            logger.warning(f"All page_numbers (skipped) to double check : {instat._pages_to_double_check}")
+            instat.validate_xml(xml_file=instat.output_xml_path)
 
             # Provide download links for XML and log files
             xml_file_path = output_folder_path / f"{temp_pdf_path.stem}.xml"

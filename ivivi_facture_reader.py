@@ -31,6 +31,12 @@ class IviviFactureReader:
         self._pages_to_double_check = []
 
     def run(self):
+        instat = self.get_instat()
+        instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
+        logger.warning(f"All page_numbers (skipped) to double check : {self._pages_to_double_check}")
+        instat.validate_xml(xml_file=self.output_xml_path)
+
+    def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
             for page_index, page in enumerate(pdf.pages):
@@ -52,9 +58,7 @@ class IviviFactureReader:
             df = pd.concat(dfs, axis=0)
             envelope = self._get_envelope(df=df)
             instat = Instat(Envelope=envelope)
-            instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
-            logger.warning(f"All page_numbers (skipped) to double check : {self._pages_to_double_check}")
-            instat.validate_xml(xml_file=self.output_xml_path)
+            return instat
 
     def _check_is_second_page(self, page) -> str:
         text = page.extract_text_simple()
