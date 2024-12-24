@@ -28,6 +28,7 @@ class IviviFactureReader:
         self.article_info = article_info
         self.output_xml_path = output_folder_path / f"{self.party.partyName}_{self.pdf_path.stem}.xml"
         self._previous_page_metadata = {}
+        self._pages_to_double_check = []
 
     def run(self):
         with pdfplumber.open(pdf_path) as pdf:
@@ -41,11 +42,13 @@ class IviviFactureReader:
                         dfs.append(df_item)
                 except ValueError as e:
                     logger.error(f"Error while processing page : {page.page_number}, error: {e}")
+                    self._pages_to_double_check.append(page.page_number)
                     continue
             df = pd.concat(dfs, axis=0)
             envelope = self._get_envelope(df=df)
             instat = Instat(Envelope=envelope)
             instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
+            logger.warning(f"All page_numbers to double check : {self._pages_to_double_check}")
             instat.validate_xml(xml_file=self.output_xml_path)
 
     def _check_is_second_page(self, page) -> str:
@@ -75,7 +78,7 @@ class IviviFactureReader:
                 metadata_dict = self._get_metadata_dict(raw_data)
                 if metadata_dict:
                     if not metadata_dict.get("N° de Tva intracom"):
-                        logger.error(f"missing N° de Tva intracom !")
+                        logger.warning(f"missing N° de Tva intracom !")
                 logger.debug(f"got metadata_dict: {metadata_dict}")
             if df_item.empty:
                 df_item = self._get_item_df(raw_data)
@@ -86,6 +89,7 @@ class IviviFactureReader:
                 self._previous_page_metadata = metadata_dict
             if df_item.empty:
                 logger.error(f"can't find item table or is empty while this is the first page for the facture, please double check page number: {page.page_number}")
+                self._pages_to_double_check.append(page.page_number)
         else:
             if self._previous_page_metadata["Numéro"] == facture_number:
                 logger.success(f"not find metadata_dict, using previous page's : {self._previous_page_metadata}")
@@ -127,6 +131,7 @@ class IviviFactureReader:
         if array.shape == (2, 6):
             if raw_data[0] == item_to_match:
                 result_dict = dict(zip(raw_data[0], raw_data[1]))
+                print(raw_data[1])
                 data = self._prepare_data_for_item_df(result_dict=result_dict, raw_1_data=raw_data[1])
                 df = pd.DataFrame(data)
                 numeric_columns = ['Qté', 'P.U. HT', 'Montant HT', 'TVA']
@@ -153,6 +158,11 @@ class IviviFactureReader:
         output = {}
         for x, y in result_dict.items():
             y_raw_list = y.split("\n")
+            if x == "Description":
+                # clean Description for edge cases
+                def starts_with_char(s):
+                    return not (s and s[0].isdigit())  # Returns False if the first character is a digit, if char , return True
+                y_raw_list = [x for x in y_raw_list if starts_with_char(x)]
             if x == "Code":
                 output[x] = [y_raw_list[i] for i in codes_indices]
             else:
@@ -175,26 +185,28 @@ class IviviFactureReader:
             item_number = index + 1
             article_name=data["Description"]
             cn8 = self._get_cn8(article_name=article_name)
-            if cn8:
-                item = Item_unit(
-                    itemNumber=item_number,
-                    CN8=cn8,
-                    MSConsDestCode="FR",
-                    countryOfOriginCode=self._get_chars_only(data["N° de Tva intracom"]),
-                    netMass=int(self._get_weight(article_name=article_name) * data["Qté"]),
-                    quantityInSU=data["Qté"],
-                    invoicedAmount=int(data["Montant HT"]),
-                    partnerId=data["N° de Tva intracom"],
-                    statisticalProcedureCode=11,
-                    NatureOfTransaction={
-                        "natureOfTransactionACode":1,
-                    },
-                    modeOfTransportCode=3,
-                    regionCode="93",
-                )
-                output_list.append(item)
-            else:
-                logger.error(f"Error while creating item for {data}, index: {index}")
+            if not cn8:
+                logger.error(f"Error while creating item for \n{data}")
+                logger.error(f"Skipped")
+                continue
+            item = Item_unit(
+                itemNumber=item_number,
+                CN8=cn8,
+                MSConsDestCode="FR",
+                countryOfOriginCode=self._get_chars_only(data["N° de Tva intracom"]),
+                netMass=int(self._get_weight(article_name=article_name) * data["Qté"]),
+                quantityInSU=data["Qté"],
+                invoicedAmount=int(data["Montant HT"]),
+                partnerId=data["N° de Tva intracom"],
+                statisticalProcedureCode=11,
+                NatureOfTransaction={
+                    "natureOfTransactionACode":1,
+                },
+                modeOfTransportCode=3,
+                regionCode="93",
+            )
+            output_list.append(item)
+                
         return output_list
 
     def _get_declarations(self, df:pd.DataFrame) -> List[Declaration_unit]:
@@ -206,21 +218,24 @@ class IviviFactureReader:
         for _, group_data in df.groupby("Numéro"):     # each facture is 1 declaration
             metadata_dict = group_data.iloc[0]
             _, month, year = metadata_dict["Date"].split(r"/")
-            declaration = Declaration_unit(
-                declarationId = metadata_dict["Numéro"][-6:],
-                referencePeriod = f"{year}-{month}",
-                PSIId = self.party.partyId,
-                Function = Function(functionCode="O"),
-                declarationTypeCode = self.declarationTypeCode,
-                flowCode = "D",
-                currencyCode = "EUR",
-                Item = self._get_items(df=group_data)
-            )
-            declarations.append(declaration)
+            items = self._get_items(df=group_data)
+            if items:
+                # no declaration if items is empty
+                declaration = Declaration_unit(
+                    declarationId = metadata_dict["Numéro"][-6:],
+                    referencePeriod = f"{year}-{month}",
+                    PSIId = self.party.partyId,
+                    Function = Function(functionCode="O"),
+                    declarationTypeCode = self.declarationTypeCode,
+                    flowCode = "D",
+                    currencyCode = "EUR",
+                    Item = items,
+                )
+                declarations.append(declaration)
         return declarations
 
 
-    def _get_cn8(self, article_name:str) -> CN8:
+    def _get_cn8(self, article_name:str) -> Union[CN8, None]:
         cn8_code = self.article_info.get_article_info(article_name=article_name, target_col='CODE')
         if cn8_code:
             cn8 = CN8(
@@ -230,7 +245,10 @@ class IviviFactureReader:
     
     def _get_weight(self, article_name:str) -> float:
         weight = self.article_info.get_article_info(article_name = article_name, target_col='POIDS/ARTICLE')
-        return weight
+        if weight:
+            return weight
+        else:
+            return 0.0
 
     def _get_datetime(self) -> DateTime:
         current_datetime = datetime.now()
