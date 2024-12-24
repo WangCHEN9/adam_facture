@@ -120,15 +120,15 @@ class IviviFactureReader:
     def _get_metadata_dict(self, raw_data: List) -> Union[Dict, None]:
         item_to_match = ['Numéro', 'Date', 'Code client', 'Date échéance', 'Mode de règlement', 'N° de Tva intracom']
         array = np.array(raw_data)
-        if array.shape == (2, 6):
+        if array.shape == (2, len(item_to_match)):
             if raw_data[0] == item_to_match:
-                result_dict = dict(zip(array[0], array[1]))
+                result_dict = dict(zip(array[0].tolist(), array[1].tolist()))
                 return result_dict
 
     def _get_item_df(self, raw_data: List) -> pd.DataFrame:
         item_to_match = ['Code', 'Description', 'Qté', 'P.U. HT', 'Montant HT', 'TVA']
         array = np.array(raw_data)
-        if array.shape == (2, 6):
+        if array.shape == (2, len(item_to_match)):
             if raw_data[0] == item_to_match:
                 result_dict = dict(zip(raw_data[0], raw_data[1]))
                 print(raw_data[1])
