@@ -89,10 +89,7 @@ def main():
                         file_name=log_file_path.name,
                         mime="text/plain"
                     )
-                with open(log_file_path, "r") as f:
-                    log_lines = f.readlines()
-                    last_3_lines = log_lines[-3:] if len(log_lines) >= 5 else log_lines
-                    st.warning("\n".join(last_3_lines))
+                st.warning(f"Please make sure, you download the log, and check if there are any warnings & errors")
             else:
                 st.error(f"Error while getting log file")
 
