@@ -8,7 +8,7 @@ import shutil
 # Streamlit App
 def main():
     st.title("PDF to XML Processor")
-    st.write("Upload a PDF file to process and generate XML and logs.")
+    st.write("Upload a PDF file to process and generate XML & logs.")
 
     # Sidebar for company selection
     st.sidebar.title("Company Selection")
