@@ -56,7 +56,7 @@ class IviviFactureReader:
                     if not df_item.empty:
                         dfs.append(df_item)
                 except Exception as e:
-                    logger.error(f"Error while processing page : {page.page_number}, error: {e}")
+                    logger.error(f"Error while processing page : {page.page_number}, skipped, error: {e}")
                     self._pages_to_double_check.append(page.page_number)
                     continue
             df = pd.concat(dfs, axis=0)
