@@ -36,7 +36,7 @@ def main():
 
     @st.cache_data
     def get_result(_process_obj):
-        return _process_obj.get_instat()
+        return (_process_obj.get_instat(), _process_obj.pages_to_double_check)
 
     if uploaded_file is not None:
         # Save the uploaded file to a temporary location
@@ -63,9 +63,9 @@ def main():
                 output_folder_path=output_folder_path
             )
             with st.status("Running"):
-                instat = get_result(reader)
+                instat, pages_to_double_check = get_result(reader)
             instat.export_to_xml(output_xml_path=xml_file_path, party_tag=reader.party_tag)
-            logger.warning(f"All page_numbers (skipped) to double check : {reader._pages_to_double_check}")
+            logger.warning(f"All page_numbers (skipped) to double check : {pages_to_double_check}")
             instat.validate_xml(xml_file=xml_file_path)
 
             # Provide download links for XML and log files

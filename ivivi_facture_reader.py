@@ -30,6 +30,10 @@ class IviviFactureReader:
         self._previous_page_metadata = {}
         self._pages_to_double_check = []
 
+    @property
+    def pages_to_double_check(self) -> List:
+        return self._pages_to_double_check
+
     def run(self):
         instat = self.get_instat()
         instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
