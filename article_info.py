@@ -8,14 +8,13 @@ from loguru import logger
 
 
 class Article_Info:
-    def __init__(self, source_excel:Path, site_name:str) -> None:
+    def __init__(self, source_excel:Path) -> None:
         self.df = pd.read_excel(source_excel, sheet_name="ARTICLE+CODE+POIDS")
         self._df_habilite = pd.read_excel(source_excel, sheet_name="STE+NO HABILITE")
-        self.site_name = site_name
 
-    @property
-    def habilite_code(self) -> str:
-        return self._df_habilite.loc[self._df_habilite['NOM STE'] == self.site_name, 'NO HBILITE'].values[0]
+    # @property
+    # def habilite_code(self) -> str:
+    #     return self._df_habilite.loc[self._df_habilite['NOM STE'] == self.site_name, 'NO HBILITE'].values[0]
 
     def get_article_info(self, article_name:str, target_col:str) -> Union[str, None]:
         df = self.df

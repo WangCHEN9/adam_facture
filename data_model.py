@@ -4,6 +4,7 @@ import xmlschema
 from pathlib import Path
 from loguru import logger
 import xml.etree.ElementTree as ET
+from lxml import etree
 
 
 class DateTime(BaseModel):
@@ -56,7 +57,7 @@ class Envelope(BaseModel):
 class Instat(BaseModel):
     Envelope: Envelope
 
-    def export_to_xml(self, output_path: Path, party_tag: str, root_tag: str = "INSTAT"):
+    def export_to_xml(self, output_xml_path: Path, party_tag: str, root_tag: str = "INSTAT"):
         """
         Export the Pydantic model instance to an XML file.
         """
@@ -95,10 +96,10 @@ class Instat(BaseModel):
 
         # Create the XML tree and write to file
         tree = ET.ElementTree(root)
-        logger.info(f"writing xml file to {output_path}")
-        tree.write(output_path, encoding="utf-8", xml_declaration=True)
+        logger.info(f"writing xml file to {output_xml_path}")
+        tree.write(output_xml_path, encoding="utf-8", xml_declaration=True)
 
-        self.replace_string_in_file(file_path=output_path, old_string="<Party>", new_string=party_tag)
+        self.replace_string_in_file(file_path=output_xml_path, old_string="<Party>", new_string=party_tag)
 
     def replace_string_in_file(self, file_path: Path, old_string: str, new_string: str):
         # Read the file's content
@@ -111,3 +112,23 @@ class Instat(BaseModel):
         # Write the modified content back to the file
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(modified_content)
+
+    def validate_xml(self, xml_file:Path, xsd_file=Path(r"xsd_valide.xsd")):
+        # Parse the XSD schema file
+        with open(xsd_file, 'r') as schema_file:
+            schema_root = etree.parse(schema_file)
+            xmlschema = etree.XMLSchema(schema_root)
+
+        # Parse the XML file
+        with open(xml_file, 'r') as xml_file:
+            xml_root = etree.parse(xml_file)
+
+        # Validate the XML file against the XSD schema
+        is_valid = xmlschema.validate(xml_root)
+
+        if is_valid:
+            logger.success("XML is valid according to the XSD schema.")
+        else:
+            logger.error("XML is not valid. Errors:")
+            for error in xmlschema.error_log:
+                logger.error(error)

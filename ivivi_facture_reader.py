@@ -23,10 +23,10 @@ class IviviFactureReader:
     envelopeId = "S4U3"
     declarationTypeCode = 1     # 1 or 4 depends on company,
 
-    def __init__(self, pdf_path:Path, article_info: Article_Info, output_path:Path) -> None:
+    def __init__(self, pdf_path:Path, article_info: Article_Info, output_folder_path:Path) -> None:
         self.pdf_path = pdf_path
         self.article_info = article_info
-        self.output_path = output_path
+        self.output_xml_path = output_folder_path / f"{self.party.partyName}_{self.pdf_path.stem}.xml"
         self._previous_page_metadata = {}
 
     def run(self):
@@ -43,10 +43,10 @@ class IviviFactureReader:
                     logger.info(f"Error while processing page : {page.page_number}")
                     continue
             df = pd.concat(dfs, axis=0)
-            df.to_csv(r"output.csv", index=False)
             envelope = self._get_envelope(df=df)
             instat = Instat(Envelope=envelope)
-            instat.export_to_xml(output_path=self.output_path, party_tag=self.party_tag)
+            instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
+            instat.validate_xml(xml_file=self.output_xml_path)
 
     def _check_is_second_page(self, page) -> str:
         text = page.extract_text_simple()
@@ -83,7 +83,7 @@ class IviviFactureReader:
             if metadata_dict:
                 self._previous_page_metadata = metadata_dict
             if df_item.empty:
-                logger.error(f"can't find df_item while this is the first page for the facture")
+                logger.error(f"can't find item table or is empty while this is the first page for the facture, please double check page number: {page.page_number}")
         else:
             if self._previous_page_metadata["Numéro"] == facture_number:
                 logger.success(f"not find metadata_dict, using previous page's : {self._previous_page_metadata}")
@@ -229,9 +229,9 @@ class IviviFactureReader:
 
 if __name__ == "__main__":
     pdf_path = Path(r"data/Facture 01-11 au 15-11.pdf")
-    source_excel = Path(r"data/DONNEES DOUANE PYTHON.xlsx")
-    output_path = r'output/xml_output.xml'
-    a = Article_Info(source_excel, 'IVIVI')
+    article_info_excel = Path(r"data/DONNEES DOUANE PYTHON.xlsx")
+    output_folder_path = Path(r'output')
+    article_info = Article_Info(source_excel=article_info_excel)
 
-    x = IviviFactureReader(pdf_path, a, output_path)
+    x = IviviFactureReader(pdf_path=pdf_path, article_info=article_info, output_folder_path=output_folder_path)
     x.run()
