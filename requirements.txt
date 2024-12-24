@@ -6,3 +6,4 @@ loguru
 lxml
 pandas
 openpyxl
+streamlit

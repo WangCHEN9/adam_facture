@@ -26,14 +26,14 @@ class IviviFactureReader:
     def __init__(self, pdf_path:Path, article_info: Article_Info, output_folder_path:Path) -> None:
         self.pdf_path = pdf_path
         self.article_info = article_info
-        self.output_xml_path = output_folder_path / f"{self.party.partyName}_{self.pdf_path.stem}.xml"
+        self.output_xml_path = output_folder_path / f"{self.pdf_path.stem}.xml"
         self._previous_page_metadata = {}
         self._pages_to_double_check = []
 
     def run(self):
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page in pdf.pages:
+            for page_index, page in enumerate(pdf.pages):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
