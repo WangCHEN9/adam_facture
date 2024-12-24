@@ -109,7 +109,7 @@ class IviviFactureReader:
                 if (len(i) - len(list_without_none)) / len(i) < 0.5 :
                     output_list.append(i)
                 else:
-                    logger.info(f"cleaned at least half empty list {i}")
+                    logger.debug(f"cleaned at least half empty list {i}")
             else:
                 if i:
                     output_list.append(i)
@@ -261,7 +261,7 @@ class IviviFactureReader:
         return datetime_instance
 
     def _get_envelope(self, df:pd.DataFrame) -> Envelope:
-        logger.info(f"preparing envelope for party: {self.party}")
+        logger.debug(f"preparing envelope for party: {self.party}")
         envelope = Envelope(
             envelopeId=self.envelopeId,
             DateTime=self._get_datetime(),

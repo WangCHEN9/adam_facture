@@ -67,11 +67,7 @@ class Instat(BaseModel):
             """
             elem = ET.Element(tag)
             for key, val in d.items():
-                if key == "@attributes" and isinstance(val, dict):
-                    for attr_key, attr_val in val.items():
-                        elem.set(str(attr_key), str(attr_val))
-                        logger.info(f"set tag attr: {attr_key} to {attr_val}")
-                elif isinstance(val, dict):
+                if isinstance(val, dict):
                     child = ET.SubElement(elem, key)
                     child.extend(list(dict_to_xml(key, val)))
                 elif isinstance(val, list):
