@@ -1,5 +1,12 @@
 
-# What this repo do
+## Python environment
+
+```python
+pip install -r requirements.txt
+```
+
+
+## What this repo do
 
 1. Read pdf facture
 2. Combine with excel input data
