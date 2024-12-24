@@ -55,7 +55,7 @@ class IviviFactureReader:
                     print(df_item)
                     if not df_item.empty:
                         dfs.append(df_item)
-                except ValueError as e:
+                except Exception as e:
                     logger.error(f"Error while processing page : {page.page_number}, error: {e}")
                     self._pages_to_double_check.append(page.page_number)
                     continue
@@ -167,14 +167,21 @@ class IviviFactureReader:
 
     def _prepare_data_for_item_df(self, result_dict, raw_1_data) -> Dict:
         (codes_indices, tva_indices) = self._get_index_of_items(raw_1_data)
+        print(raw_1_data)
         output = {}
         for x, y in result_dict.items():
             y_raw_list = y.split("\n")
             if x == "Description":
                 # clean Description for edge cases
-                def starts_with_char(s):
-                    return not (s and s[0].isdigit())  # Returns False if the first character is a digit, if char , return True
-                y_raw_list = [x for x in y_raw_list if starts_with_char(x)]
+                def is_valid_description(s):
+                    result = not (s and s[0].isdigit())  # Returns False if the first character is a digit, if char , return True
+                    wrong_starts_with_list = ["NOIR", "ARGENT"] # dirty fix for wrong item description
+                    for wrong in wrong_starts_with_list:
+                        if s.startswith(wrong):
+                            result = False
+                            logger.warning(f"Remove wrong description: {s}, because it startswith: {wrong}")
+                    return result
+                y_raw_list = [x for x in y_raw_list if is_valid_description(x)]
             if x == "Code":
                 output[x] = [y_raw_list[i] for i in codes_indices]
             else:
