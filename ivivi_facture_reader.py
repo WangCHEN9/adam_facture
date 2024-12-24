@@ -34,6 +34,11 @@ class IviviFactureReader:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
             for page in pdf.pages:
+                text = page.extract_text_simple()
+                if page.page_number == 1:
+                    # just to double check if the pdf is matched with party name
+                    if self.party.partyName not in text:
+                        raise ValueError(f"{self.party.partyName} not found in {self.pdf_path}, page: {page.page_number}, probably wrong input pdf")
                 try:
                     logger.info(f"extracting information from page number: {page.page_number}")
                     df_item = self._get_full_df_from_page(page=page)
@@ -131,7 +136,6 @@ class IviviFactureReader:
         if array.shape == (2, len(item_to_match)):
             if raw_data[0] == item_to_match:
                 result_dict = dict(zip(raw_data[0], raw_data[1]))
-                print(raw_data[1])
                 data = self._prepare_data_for_item_df(result_dict=result_dict, raw_1_data=raw_data[1])
                 df = pd.DataFrame(data)
                 numeric_columns = ['Qté', 'P.U. HT', 'Montant HT', 'TVA']
