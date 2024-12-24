@@ -48,7 +48,7 @@ class IviviFactureReader:
             envelope = self._get_envelope(df=df)
             instat = Instat(Envelope=envelope)
             instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
-            logger.warning(f"All page_numbers to double check : {self._pages_to_double_check}")
+            logger.warning(f"All page_numbers (skipped) to double check : {self._pages_to_double_check}")
             instat.validate_xml(xml_file=self.output_xml_path)
 
     def _check_is_second_page(self, page) -> str:
