@@ -35,8 +35,8 @@ def main():
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
     @st.cache_data
-    def get_result(process_obj):
-        return process_obj.get_instat()
+    def get_result(_process_obj):
+        return _process_obj.get_instat()
 
     if uploaded_file is not None:
         # Save the uploaded file to a temporary location
@@ -56,6 +56,7 @@ def main():
         # Process the PDF
         st.write("Processing the PDF... It will take few minutes")
         try:
+            xml_file_path = output_folder_path / f"{temp_pdf_path.stem}.xml"
             reader = process_func(
                 pdf_path=temp_pdf_path, 
                 article_info=article_info, 
@@ -63,12 +64,11 @@ def main():
             )
             with st.status("Running"):
                 instat = get_result(reader)
-            instat.export_to_xml(output_xml_path=instat.output_xml_path, party_tag=instat.party_tag)
-            logger.warning(f"All page_numbers (skipped) to double check : {instat._pages_to_double_check}")
-            instat.validate_xml(xml_file=instat.output_xml_path)
+            instat.export_to_xml(output_xml_path=xml_file_path, party_tag=reader.party_tag)
+            logger.warning(f"All page_numbers (skipped) to double check : {reader._pages_to_double_check}")
+            instat.validate_xml(xml_file=xml_file_path)
 
             # Provide download links for XML and log files
-            xml_file_path = output_folder_path / f"{temp_pdf_path.stem}.xml"
             if xml_file_path.exists():
                 with open(xml_file_path, "rb") as f:
                     st.download_button(
@@ -82,6 +82,10 @@ def main():
                 st.error(f"Error while creating xml file")
 
             if log_file_path.exists():
+                with open(log_file_path, "r") as f:
+                    log_lines = f.readlines()
+                    last_5_lines = log_lines[-5:] if len(log_lines) >= 5 else log_lines
+                    st.text("\n".join(last_5_lines))
                 with open(log_file_path, "rb") as f:
                     st.download_button(
                         label="Download Log",
