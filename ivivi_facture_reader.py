@@ -31,7 +31,7 @@ class IviviFactureReader:
         self._pages_to_double_check = []
 
     def run(self):
-        with pdfplumber.open(pdf_path) as pdf:
+        with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
             for page in pdf.pages:
                 try:
@@ -270,13 +270,3 @@ class IviviFactureReader:
             Declaration=self._get_declarations(df=df)
         )
         return envelope
-
-
-if __name__ == "__main__":
-    pdf_path = Path(r"data/Facture 01-11 au 15-11.pdf")
-    article_info_excel = Path(r"data/DONNEES DOUANE PYTHON.xlsx")
-    output_folder_path = Path(r'output')
-    article_info = Article_Info(source_excel=article_info_excel)
-
-    x = IviviFactureReader(pdf_path=pdf_path, article_info=article_info, output_folder_path=output_folder_path)
-    x.run()
