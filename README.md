@@ -8,6 +8,6 @@
 
 ## Important note
 
-1. The parser of pdf id per company, each company has different pdf format, so the parse method must be updated, and handle different edge cases
+1. The parser of pdf is per company, each company has different pdf format, so the parse method must be updated, and handle different edge cases
 
 2. Failed parse page will be print out in the end
