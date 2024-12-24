@@ -33,10 +33,8 @@ def main():
 
     # File uploader
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
-
-    @st.cache_data
-    def get_result(_process_obj):
-        return (_process_obj.get_instat(), _process_obj.pages_to_double_check)
+    if "process_done" not in st.session_state:
+        st.session_state["process_done"] = False
 
     if uploaded_file is not None:
         # Save the uploaded file to a temporary location
@@ -62,11 +60,11 @@ def main():
                 article_info=article_info, 
                 output_folder_path=output_folder_path
             )
-            with st.status("Running"):
-                instat, pages_to_double_check = get_result(reader)
-            instat.export_to_xml(output_xml_path=xml_file_path, party_tag=reader.party_tag)
-            logger.warning(f"All page_numbers (skipped) to double check : {pages_to_double_check}")
-            instat.validate_xml(xml_file=xml_file_path)
+            if not st.session_state["process_done"]:
+                logger.debug(f"start to process, as session_state process_done: {st.session_state['process_done']}")
+                with st.status("Running"):
+                    reader.run()
+                    st.session_state["process_done"] = True
 
             # Provide download links for XML and log files
             if xml_file_path.exists():

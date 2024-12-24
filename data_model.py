@@ -80,8 +80,6 @@ class Instat(BaseModel):
                 else:
                     child = ET.SubElement(elem, key)
                     child.text = str(val)
-            if tag == "Party":
-                print(elem.tag)
             return elem
 
         # Convert the Pydantic model to a dictionary
