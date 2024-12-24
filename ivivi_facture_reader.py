@@ -89,8 +89,8 @@ class IviviFactureReader:
             raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
             if not metadata_dict:
                 metadata_dict = self._get_metadata_dict(raw_data)
-                metadata_dict["page_number"] = page.page_number
                 if metadata_dict:
+                    metadata_dict["page_number"] = page.page_number
                     if not metadata_dict.get("N° de Tva intracom"):
                         logger.warning(f"missing N° de Tva intracom !")
                 logger.debug(f"got metadata_dict: {metadata_dict}")
