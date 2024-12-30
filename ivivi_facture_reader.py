@@ -52,9 +52,10 @@ class IviviFactureReader:
                 try:
                     logger.info(f"extracting information from page number: {page.page_number}")
                     df_item = self._get_full_df_from_page(page=page)
-                    print(df_item)
+                    logger.debug(df_item)
                     if not df_item.empty:
                         is_empty_tva = df['N° de Tva intracom'].isnull().any()
+                        logger.debug(f"Checked is_empty_tva: {is_empty_tva}")
                         if not is_empty_tva:
                             dfs.append(df_item)
                         else:
