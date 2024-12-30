@@ -19,9 +19,9 @@ class Function(BaseModel):
     functionCode: str = Field(..., pattern=r"^O$", description="Function code, always 'O' for original declaration")
 
 class CN8(BaseModel):
-    CN8Code: Optional[str] = Field(None, min_length=8, max_length=8, description="Combined nomenclature code (8 characters)")
-    SUCode: Optional[str] = Field(None, description="Supplementary unit code")
-    additionalGoodsCode: Optional[str] = Field(None, description="Additional goods code")
+    CN8Code: Optional[str] = Field("", min_length=8, max_length=8, description="Combined nomenclature code (8 characters)")
+    SUCode: Optional[str] = Field("", description="Supplementary unit code")
+    additionalGoodsCode: Optional[str] = Field("", description="Additional goods code")
 
 class Item_unit(BaseModel):
     itemNumber: int = Field(..., gt=0, le=999999, description="Positive line number")
