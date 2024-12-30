@@ -60,7 +60,7 @@ class IviviFactureReader:
                         if is_good_tva:
                             dfs.append(df_item)
                         else:
-                            logger.warning(f"Skipped because N° de Tva intracom is null")
+                            logger.warning(f"Skipped because N° de Tva intracom is not good")
                             self._pages_to_double_check.append(page.page_number)
                 except Exception as e:
                     logger.error(f"Error while processing page : {page.page_number}, skipped, error: {e}")
