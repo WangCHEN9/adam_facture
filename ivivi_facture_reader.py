@@ -219,7 +219,7 @@ class IviviFactureReader:
                 quantityInSU=data["Qté"],
                 invoicedAmount=int(data["Montant HT"]),
                 partnerId=data["N° de Tva intracom"],
-                statisticalProcedureCode=11,
+                statisticalProcedureCode=21,
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                 },
