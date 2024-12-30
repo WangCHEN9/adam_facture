@@ -213,8 +213,8 @@ class IviviFactureReader:
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
-                MSConsDestCode="FR",
-                countryOfOriginCode=self._get_chars_only(data["N° de Tva intracom"]),
+                MSConsDestCode=self._get_chars_only(data["N° de Tva intracom"]),
+                countryOfOriginCode="FR",
                 netMass=int(self._get_weight(article_name=article_name) * data["Qté"]),
                 quantityInSU=data["Qté"],
                 invoicedAmount=int(data["Montant HT"]),
@@ -222,6 +222,7 @@ class IviviFactureReader:
                 statisticalProcedureCode=21,
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
+                    "natureOfTransactionBCode":1,
                 },
                 modeOfTransportCode=3,
                 regionCode="93",
