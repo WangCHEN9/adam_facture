@@ -54,7 +54,12 @@ class IviviFactureReader:
                     df_item = self._get_full_df_from_page(page=page)
                     print(df_item)
                     if not df_item.empty:
-                        dfs.append(df_item)
+                        is_empty_tva = df['N° de Tva intracom'].isnull().any()
+                        if not is_empty_tva:
+                            dfs.append(df_item)
+                        else:
+                            logger.warning(f"Skipped because N° de Tva intracom is null")
+                            self._pages_to_double_check.append(page.page_number)
                 except Exception as e:
                     logger.error(f"Error while processing page : {page.page_number}, skipped, error: {e}")
                     self._pages_to_double_check.append(page.page_number)
