@@ -29,16 +29,20 @@ class IviviFactureReader:
         self.output_xml_path = output_folder_path / f"{self.pdf_path.stem}.xml"
         self._previous_page_metadata = {}
         self._pages_to_double_check = []
+        self.df_item_all = None
 
     @property
     def pages_to_double_check(self) -> List:
         return self._pages_to_double_check
 
-    def run(self):
+    def run(self) -> pd.DataFrame:
         instat = self.get_instat()
+        df_envelope = instat.Envelope.to_df()   # not always match with df_item_all, because df_item could have item doesn't match code in data\DONNEES DOUANE PYTHON.xlsx
         instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
         logger.warning(f"All page_numbers (skipped) to double check : {self._pages_to_double_check}")
         instat.validate_xml(xml_file=self.output_xml_path)
+        if self.df_item_all is not None:
+            return self.df_item_all
 
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
@@ -67,6 +71,7 @@ class IviviFactureReader:
                     self._pages_to_double_check.append(page.page_number)
                     continue
             df = pd.concat(dfs, axis=0)
+            self.df_item_all = df.copy()
             envelope = self._get_envelope(df=df)
             instat = Instat(Envelope=envelope)
             return instat
