@@ -7,3 +7,4 @@ lxml
 pandas
 openpyxl
 streamlit
+xlsxwriter

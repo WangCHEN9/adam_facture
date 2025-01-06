@@ -4,6 +4,8 @@ from article_info import Article_Info
 from ivivi_facture_reader import IviviFactureReader
 from loguru import logger
 import shutil
+import pandas as pd
+from io import BytesIO
 
 # Streamlit App
 def main(output_folder_path, log_folder_path):
@@ -47,6 +49,7 @@ def main(output_folder_path, log_folder_path):
         st.write("Processing the PDF... It will take few minutes")
         try:
             xml_file_path = output_folder_path / f"{temp_pdf_path.stem}.xml"
+            excel_file_path = output_folder_path / f"{temp_pdf_path.stem}.xlsx"
             log_file_path = log_folder_path / f"{temp_pdf_path.stem}.log"
 
             reader = process_func(
@@ -58,8 +61,20 @@ def main(output_folder_path, log_folder_path):
                 logger.debug(f"start to process, as session_state process_done: {st.session_state['process_done']}")
                 with st.status("Running"):
                     configure_logging(log_file_path)
-                    reader.run()
+                    df = reader.run()
+                    if df is not None:
+                        df.to_excel(excel_file_path, index=False)
                     st.session_state["process_done"] = True
+
+            if excel_file_path.exists():
+                with open(excel_file_path, "rb") as f:
+                    st.download_button(
+                        label="Download PDF Scan result as excel",
+                        data=f,
+                        file_name=excel_file_path.name,
+                        mime="application/vnd.ms-excel",
+                    )
+                st.success(f"PDF Scan result as excel, ready to be downloaded")
 
             # Provide download links for XML and log files
             if xml_file_path.exists():

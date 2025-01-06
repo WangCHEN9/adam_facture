@@ -35,7 +35,7 @@ class IviviFactureReader:
     def pages_to_double_check(self) -> List:
         return self._pages_to_double_check
 
-    def run(self) -> pd.DataFrame:
+    def run(self) -> Union[pd.DataFrame, None]:
         instat = self.get_instat()
         df_envelope = instat.Envelope.to_df()   # not always match with df_item_all, because df_item could have item doesn't match code in data\DONNEES DOUANE PYTHON.xlsx
         instat.export_to_xml(output_xml_path=self.output_xml_path, party_tag=self.party_tag)
