@@ -21,4 +21,5 @@ if __name__ == "__main__":
     logger.add(log_file_path, level="INFO")
 
     x = IviviFactureReader(pdf_path=pdf_path, article_info=article_info, output_folder_path=output_folder_path)
-    x.run()
+    df = x.run()
+    df.to_excel(output_folder_path / f"{pdf_path.stem}.xlsx", index=False)

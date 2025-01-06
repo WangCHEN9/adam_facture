@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 import xmlschema
 from pathlib import Path
 from loguru import logger
+import pandas as pd
 import xml.etree.ElementTree as ET
 from lxml import etree
 
@@ -37,6 +38,11 @@ class Item_unit(BaseModel):
     modeOfTransportCode: Optional[int] = Field(None, ge=1, le=9, description="Mode of transport code")
     regionCode: Optional[str] = Field(None, pattern=r"^(\d{2}|2A|2B)$", description="Region code")
 
+    def to_dict(self) -> Dict:
+        main_dict = self.model_dump(exclude='CN8')
+        cn8 = self.CN8.model_dump()
+        return {**main_dict, **cn8}
+
 class Declaration_unit(BaseModel):
     declarationId: str = Field(..., min_length=6, max_length=6, description="Declaration identifier (6 characters numeric)")
     referencePeriod: str = Field(..., pattern=r"^20\d{2}-\d{2}$", description="Reference period in format YYYY-MM")
@@ -47,12 +53,25 @@ class Declaration_unit(BaseModel):
     currencyCode: str = Field(..., pattern=r"^EUR$", description="Currency code, always EUR")
     Item: List[Item_unit]
 
+    def to_records(self) -> List[Dict]:
+        main_dict = self.model_dump(exclude='Item')
+        return [ {**main_dict, **item.to_dict()} for item in self.Item ]
+
+
 class Envelope(BaseModel):
     envelopeId: str = Field(..., max_length=4, description="Envelope identifier (4 alphanumeric characters)")
     DateTime: DateTime
     Party: Party
     softwareUsed: Optional[str] = Field(None, max_length=14, description="Software used for XML generation")
     Declaration: List[Declaration_unit]
+
+    def to_df(self) -> pd.DataFrame:
+        main_dict = self.model_dump(exclude='Declaration')
+        output = []
+        for declaration in self.Declaration:
+            output += declaration.to_records()
+        df = pd.DataFrame(output)
+        return df
 
 class Instat(BaseModel):
     Envelope: Envelope
