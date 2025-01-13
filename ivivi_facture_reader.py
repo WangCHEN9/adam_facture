@@ -205,7 +205,10 @@ class IviviFactureReader:
         if input_str:
             chars_only = re.match(r'^[A-Za-z]+', input_str)
             if chars_only:
-                return chars_only.group()  # Extract the matched part
+                output = chars_only.group()  # Extract the matched part
+                if output == "ESB":
+                    output = "ES"
+                return output
             else:
                 logger.error(f"No alphabetic characters at the start for {input_str}")
         else:
@@ -227,9 +230,9 @@ class IviviFactureReader:
                 CN8=cn8,
                 MSConsDestCode=self._get_chars_only(data["N° de Tva intracom"]),
                 countryOfOriginCode="FR",
-                netMass=int(self._get_weight(article_name=article_name) * data["Qté"]),
+                netMass=round(self._get_weight(article_name=article_name) * data["Qté"]),
                 quantityInSU=data["Qté"],
-                invoicedAmount=int(data["Montant HT"]),
+                invoicedAmount=round(data["Montant HT"]),
                 partnerId=data["N° de Tva intracom"],
                 statisticalProcedureCode=21,
                 NatureOfTransaction={
