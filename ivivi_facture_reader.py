@@ -44,10 +44,36 @@ class IviviFactureReader:
         if self.df_item_all is not None:
             return self.df_item_all
 
+    def _get_remise(self, page, next_page=None) -> float:
+        remise = self._get_remise_from_text(text=page.extract_text_simple())
+        if remise is not None:
+            return remise
+        else:
+            if next_page:
+                remise = self._get_remise_from_text(text=next_page.extract_text_simple())
+                logger.warning(f"can't get remise from page: {page.page_number}, looking at next page: {next_page.page_number}")
+                if remise is not None:
+                    return remise
+        raise ValueError(f"Can't find remise for page: {page.page_number}")
+
+    def _get_remise_from_text(self, text) -> Union[float, None]:
+        match = re.search(r'Remise (\d+,\d+)%', text)
+
+        # Check if a match was found
+        if match:
+            remise = match.group(1)  # Extract the matched text
+            remise = float(remise.replace(",", ".")) / 100
+            logger.info(f"Got Remise: {remise}")
+            return remise
+
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
             for page_index, page in enumerate(pdf.pages):
+                if page_index < len(pdf.pages) - 1:
+                    next_page = pdf.pages[page_index+1]
+                else:
+                    next_page = None
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -55,7 +81,7 @@ class IviviFactureReader:
                         raise ValueError(f"{self.party.partyName} not found in {self.pdf_path}, page: {page.page_number}, probably wrong input pdf")
                 try:
                     logger.info(f"extracting information from page number: {page.page_number}")
-                    df_item = self._get_full_df_from_page(page=page)
+                    df_item = self._get_full_df_from_page(page=page, next_page=next_page)
                     logger.debug(df_item)
                     if not df_item.empty:
                         # Check if all string lengths in the TVA column are greater than 3, which is a valid TVA
@@ -86,8 +112,9 @@ class IviviFactureReader:
         else:
             logger.debug(f"{page.page_number} is the first page for the facture")
 
-    def _get_full_df_from_page(self, page) -> pd.DataFrame:
+    def _get_full_df_from_page(self, page, next_page) -> pd.DataFrame:
         facture_number = self._check_is_second_page(page)
+        remise = self._get_remise(page=page, next_page=next_page)
         if not facture_number:
             is_first_page = True
         else:
@@ -103,6 +130,7 @@ class IviviFactureReader:
                 metadata_dict = self._get_metadata_dict(raw_data)
                 if metadata_dict:
                     metadata_dict["page_number"] = page.page_number
+                    metadata_dict["remise"] = remise
                     if not metadata_dict.get("N° de Tva intracom"):
                         logger.warning(f"missing N° de Tva intracom !")
                 logger.debug(f"got metadata_dict: {metadata_dict}")
@@ -180,7 +208,6 @@ class IviviFactureReader:
 
     def _prepare_data_for_item_df(self, result_dict, raw_1_data) -> Dict:
         (codes_indices, tva_indices) = self._get_index_of_items(raw_1_data)
-        print(raw_1_data)
         output = {}
         for x, y in result_dict.items():
             y_raw_list = y.split("\n")
@@ -225,6 +252,7 @@ class IviviFactureReader:
                 logger.error(f"Skipped")
                 self._pages_to_double_check.append(data["page_number"])
                 continue
+            invoicedAmount=round(data["Montant HT"] * (1 - data["remise"]))
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
@@ -232,7 +260,7 @@ class IviviFactureReader:
                 countryOfOriginCode="FR",
                 netMass=round(self._get_weight(article_name=article_name) * data["Qté"]),
                 quantityInSU=data["Qté"],
-                invoicedAmount=round(data["Montant HT"]),
+                invoicedAmount=invoicedAmount,
                 partnerId=data["N° de Tva intracom"],
                 statisticalProcedureCode=21,
                 NatureOfTransaction={
