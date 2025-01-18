@@ -1,6 +1,7 @@
 
 from pathlib import Path
 from typing import Union
+import re
 
 import pandas as pd
 from difflib import get_close_matches
@@ -12,13 +13,17 @@ class Article_Info:
         self.df = pd.read_excel(source_excel, sheet_name="ARTICLE+CODE+POIDS")
         self._df_habilite = pd.read_excel(source_excel, sheet_name="STE+NO HABILITE")
 
-    # @property
-    # def habilite_code(self) -> str:
-    #     return self._df_habilite.loc[self._df_habilite['NOM STE'] == self.site_name, 'NO HBILITE'].values[0]
+    def _clean_article_name(self, article_name:str) -> str:
+        # Regular expression to remove 'LOTS ' or 'LOT ' at the beginning of the string
+        cleaned_string = re.sub(r'^(LOTS|LOT)\s+', '', article_name)
+        if cleaned_string != article_name:
+            logger.info(f"cleaned article_name from {article_name} to {cleaned_string}")
+        return cleaned_string
 
     def get_article_info(self, article_name:str, target_col:str) -> Union[str, None]:
         df = self.df
         related_code = df.loc[df['ARTICLE'] == article_name, target_col].values
+
 
         if related_code.size > 0:
             logger.debug(f"The {target_col} for {article_name} is {related_code[0]}")
