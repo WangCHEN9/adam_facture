@@ -32,6 +32,7 @@ class Item_unit(BaseModel):
     netMass: Optional[int] = Field(None, ge=0, le=9999999999, description="Net mass of goods")
     quantityInSU: Optional[int] = Field(None, ge=0, le=9999999999, description="Quantity in supplementary units")
     invoicedAmount: int = Field(..., gt=0, le=99999999999, description="Invoice amount in euros")
+    invoicedNumber: Optional[str] = Field(default=None, min_length=8, max_length=8, description="invoicedNumber (8 alphanumériques)")
     partnerId: Optional[str] = Field(None, description="Partner's VAT number (ISO country + number)")
     statisticalProcedureCode: int = Field(..., description="Statistical procedure code")
     NatureOfTransaction: Optional[Dict]
