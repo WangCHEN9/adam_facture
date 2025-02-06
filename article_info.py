@@ -16,6 +16,8 @@ class Article_Info:
     def _clean_article_name(self, article_name:str) -> str:
         # Regular expression to remove 'LOTS ' or 'LOT ' at the beginning of the string
         cleaned_string = re.sub(r'^(LOTS|LOT)\s+', '', article_name)
+        if 'blazer' in cleaned_string.lower():
+            cleaned_string = 'VESTE'
         if cleaned_string != article_name:
             logger.info(f"cleaned article_name from {article_name} to {cleaned_string}")
         return cleaned_string
