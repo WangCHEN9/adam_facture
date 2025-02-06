@@ -261,9 +261,9 @@ class IviviFactureReader:
                 netMass=round(self._get_weight(article_name=article_name) * data["Qté"]),
                 quantityInSU=data["Qté"],
                 invoicedAmount=invoicedAmount,
+                statisticalProcedureCode=21,
                 partnerId=data["N° de Tva intracom"],
                 invoicedNumber=data["Numéro"][-8:],
-                statisticalProcedureCode=21,
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,
