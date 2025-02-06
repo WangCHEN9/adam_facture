@@ -117,3 +117,4 @@ if __name__ == "__main__":
     log_folder_path.mkdir(parents=True, exist_ok=True)
 
     main(output_folder_path, log_folder_path)
+
