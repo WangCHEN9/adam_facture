@@ -13,14 +13,14 @@ from data_model import Party, Item_unit, Declaration_unit, CN8, Envelope, DateTi
 from article_info import Article_Info
 
 
-class JessyFactureReader:
+class DolvikaFactureReader:
 
     party = Party(**{
-        "partyId":"FR0979124578000000",  #! last 5 numbers to be updated!
-        "partyName":"Jessy & co",
+        "partyId":"FR3451291046400019",  
+        "partyName":"DOLVIKA",
     })
     party_tag = r'<Party partyType="TDP" partyRole="sender">'
-    envelopeId = "L5B7"
+    envelopeId = "S4FW"
     declarationTypeCode = 1     # 1 or 4 depends on company,
 
     def __init__(self, pdf_path:Path, article_info: Article_Info, output_folder_path:Path) -> None:
@@ -30,6 +30,8 @@ class JessyFactureReader:
         self._previous_page_metadata = {}
         self._pages_to_double_check = []
         self.df_item_all = None
+        self.HEIGHT = 841.92004
+        self.WIDTH = 595.32001
 
     @property
     def pages_to_double_check(self) -> List:
@@ -45,24 +47,28 @@ class JessyFactureReader:
             return self.df_item_all
 
     def _get_corp_1_info(self, page) -> Dict:
-        HEIGHT = 841.92004
-        WIDTH = 595.32001
-        BOUNDING_BOX_1 = (WIDTH * 3/8, 0, WIDTH , HEIGHT * 1.8/22.5) 
-        corp_1 = page.crop(BOUNDING_BOX_1)
+
+        BOUNDING_BOX = (0, self.HEIGHT * 0.30, self.WIDTH , self.HEIGHT * 0.34) 
+        corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        res = lines[-1]["text"].split(" ")
-        facture_number, date, client = res
-        corp_1_dict = {
-            "Facture N°": facture_number,
-            "Date": date,
-            "Client": client,
-        }
-        return corp_1_dict
+        res = lines[-1]["text"]
+        pattern = r"(.+?)\s(\d{2}/\d{2}/\d{4})"
+        match = re.search(pattern, res)
+        if match:
+            facture_number = match.group(1).replace(" ", "")
+            Date = match.group(2)
+            corp_1_dict = {
+                "Numéro": facture_number,
+                "Date": Date,
+            }
+            return corp_1_dict
+        else:
+            raise ValueError(f"Can't get Numéro and Date")
 
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages):
+            for page_index, page in enumerate(pdf.pages[:1]):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -89,15 +95,24 @@ class JessyFactureReader:
 
     def _get_full_df_from_page(self, page) -> pd.DataFrame:
 
-        tables = page.find_tables()
         metadata_dict = self._get_corp_1_info(page)
         metadata_dict["page_number"] = page.page_number
-        table = tables[0]
-        raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
-        print(raw_data)
+        BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
+        corp_1 = page.crop(BOUNDING_BOX)
+        lines = corp_1.extract_text_lines()
+        # Regex pattern explanation:
+        # ^\d{4} → Start with 4 digits
+        # \s+\w+ → Followed by a word (the product name)
+        # (\s+\d+,\d{2})+ → Followed by space-separated numeric values in "xx,xx" format
+        pattern = r"(^\d{4})\s+([\w\s']+)(\s+\d+,\d{2})+"
+        line_texts = []
+        for x in lines:
+            match = re.search(pattern, x["text"])
+            if match:
+                line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")))
+        print(line_texts)
                 
-        df_item = self._get_item_df(raw_data)
-        df_item = df_item[df_item["Désignation"] != "FRAISTRANSPORT"]  #! to check if OK doing this
+        df_item = self._get_item_df(line_texts)
         for k, v in metadata_dict.items():  # add metadata dict into df_items
             df_item[k] = v
         return df_item
@@ -119,23 +134,22 @@ class JessyFactureReader:
         return output_list
 
     def _get_item_df(self, raw_data: List) -> pd.DataFrame:
-        item_to_match = ['Désignation', 'Quantité', 'P.U. HT', '% REM', 'Remise HT', 'Montant HT']
-        array = np.array(raw_data)
-        if array.shape == (2, len(item_to_match)):
-            if raw_data[0] == item_to_match:
-                result_dict = dict(zip(raw_data[0], raw_data[1]))
-                data = self._prepare_data_for_item_df(result_dict=result_dict, raw_1_data=raw_data[1])
-                df = pd.DataFrame(data)
-                numeric_columns = ['Quantité', 'P.U. HT', '% REM', 'Remise HT', 'Montant HT']
-                for col in numeric_columns:
-                    df[col] = df[col].str.replace(',', '.')
-                    df[col] = df[col].str.replace(' ', '')
-                    df[col] = df[col].astype(float)
-                df['remis_check'] = (df['Quantité'] * df['P.U. HT'] * df['% REM']/100).round(2) == df['Remise HT']
-                if not df['remis_check'].all():
-                    raise ValueError("One or more rows failed the Remis_check")
-                return df
-        return pd.DataFrame({i: [] for i in item_to_match}) # return empty df
+        item_to_match = ["Code article", "Désignation", "Quantité", "P.U. HT", "Rem. %", "Montant HT", "TVA"]
+        df_data = []
+        for data in raw_data:
+            splited_text: List = data.split(" ")
+            if len(splited_text) == len(item_to_match) - 1:
+                splited_text.insert(4, 0)
+            elif len(splited_text) < len(item_to_match) - 1:
+                raise ValueError(f"Data missing during extract from table")
+            df_data.append(splited_text)
+        df = pd.DataFrame.from_records(df_data, columns=item_to_match)
+        numeric_columns = ["Quantité", "P.U. HT", "Montant HT", "TVA"]
+        for col in numeric_columns:
+            df[col] = df[col].str.replace(',', '.')
+            df[col] = df[col].str.replace(' ', '')
+            df[col] = df[col].astype(float)
+        return df
 
     def _get_index_of_items(self, raw_1_data: List) -> List:
         codes = raw_1_data[2].split("\n")   # P.U. HT
@@ -220,7 +234,7 @@ class JessyFactureReader:
                 statisticalProcedureCode=21,
                 # partnerId=data["N° de Tva intracom"],
                 partnerId="xxxxxxxxx",  #! to be updated
-                invoicedNumber=f'FA{data["Facture N°"]}',   #! to be updated
+                invoicedNumber=f'X{data["Numéro"]}',    #! to double check length
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,
@@ -234,18 +248,18 @@ class JessyFactureReader:
 
     def _get_declarations(self, df:pd.DataFrame) -> List[Declaration_unit]:
 
-        has_no_nulls = not df['Facture N°'].isnull().any()
+        has_no_nulls = not df['Numéro'].isnull().any()
         if not has_no_nulls:
-            raise ValueError(f"Got df with null value in column Facture N°")    # make sure Facture N° is not empty
+            raise ValueError(f"Got df with null value in column Numéro")    # make sure Numéro is not empty
         declarations = []
-        for _, group_data in df.groupby("Facture N°"):     # each facture is 1 declaration
+        for _, group_data in df.groupby("Numéro"):     # each facture is 1 declaration
             metadata_dict = group_data.iloc[0]
             _, month, year = metadata_dict["Date"].split(r"/")
             items = self._get_items(df=group_data)
             if items:
                 # no declaration if items is empty
                 declaration = Declaration_unit(
-                    declarationId = metadata_dict["Facture N°"][-6:],
+                    declarationId = metadata_dict["Numéro"][-6:],
                     referencePeriod = f"{year}-{month}",
                     PSIId = self.party.partyId,
                     Function = Function(functionCode="O"),
