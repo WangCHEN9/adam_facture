@@ -142,7 +142,7 @@ class DolvikaFactureReader:
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        pattern = r"(^\d*|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+\s+(\d+\s?\d?,\d{2})(\s[1])?$"
+        pattern = r"(^\d*|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+\s+(\d+\s?\d*,\d{2})(\s[1])?$"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
