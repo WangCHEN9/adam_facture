@@ -143,12 +143,12 @@ class DolvikaFactureReader:
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        pattern = r"(^\d{4}|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+"
+        pattern = r"(^\d*|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+\s+(\d+\s?\d+,\d{2})(\s[1])?$"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
             if match:
-                line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")))
+                line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")).replace(match.group(4), match.group(4).replace(" ", "")))
         print(line_texts)
                 
         df_item = self._get_item_df(line_texts)
@@ -167,7 +167,7 @@ class DolvikaFactureReader:
                 splited_text.insert(4, "0")
             elif len(splited_text) < len(item_to_match) - 1:
                 raise ValueError(f"Missing column data during df_item preparison")
-            df_data.append(splited_text)
+            df_data.append(splited_text.copy())
         df = pd.DataFrame.from_records(df_data, columns=item_to_match)
         numeric_columns = ["Quantité", "P.U. HT", "Montant HT", "TVA"]
         for col in numeric_columns:

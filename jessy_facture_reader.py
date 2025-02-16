@@ -218,9 +218,8 @@ class JessyFactureReader:
                 quantityInSU=data["Quantité"],
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
-                # partnerId=data["N° de Tva intracom"],
-                partnerId="xxxxxxxxx",  #! to be updated
-                invoicedNumber=f'FA{data["Facture N°"]}',   #! to be updated
+                # partnerId=data["N° de Tva intracom"], #! no TVA
+                invoicedNumber=f'FA{data["Facture N°"]}',   #! to be confirmed
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,
