@@ -156,22 +156,6 @@ class DolvikaFactureReader:
             df_item[k] = v
         return df_item
 
-    def _remove_empty_items(self, input_list: List) -> List:
-        output_list = []
-        for i in input_list:
-            if isinstance(i, list):
-                list_without_none = [x for x in i if x]
-                if (len(i) - len(list_without_none)) / len(i) < 0.5 :
-                    output_list.append(i)
-                else:
-                    logger.debug(f"cleaned at least half empty list {i}")
-            else:
-                if i:
-                    output_list.append(i)
-                else:
-                    logger.warning(f"cleaned empty item {i}")
-        return output_list
-
     def _get_item_df(self, raw_data: List) -> pd.DataFrame:
         item_to_match = ["Code article", "Désignation", "Quantité", "P.U. HT", "Rem. %", "Montant HT", "TVA"]
         df_data = []
@@ -191,64 +175,6 @@ class DolvikaFactureReader:
             df[col] = df[col].str.replace(' ', '')
             df[col] = df[col].astype(float)
         return df
-
-    def _get_index_of_items(self, raw_1_data: List) -> List:
-        codes = raw_1_data[2].split("\n")   # P.U. HT
-        codes_indices = [index for index, value in enumerate(codes) if value is not None]
-
-        return codes_indices
-
-    def _prepare_data_for_item_df(self, result_dict, raw_1_data) -> Dict:
-        codes_indices = self._get_index_of_items(raw_1_data)
-        number_of_items = len(codes_indices)
-        logger.debug(f"number_of_items: {number_of_items}")
-        if len(raw_1_data[0].split("\n")) == number_of_items:
-            easy_mode = True
-        else:
-            easy_mode = False
-        logger.info(f"easy mode: {easy_mode}")
-        output = {}
-        for x, y in result_dict.items():
-            y_raw_list = y.split("\n")
-            if x == "Désignation":
-                words_to_remove = ["HS", "ELASTAIN", "POLIESTER", "ACRYLIQUE", "elasatin"]
-                y_raw_list_des = [i.replace("FRAIS TRANSPORT", "FRAISTRANSPORT") for i in y_raw_list if not ("ORIGIN" in i or "SHIPPER" in i or "GOODS" in i)]  # remove item des like ORIGIN OF THE GOODS : ITALY
-                y = "\n".join(y_raw_list_des)
-                if easy_mode == False:
-                    output[x] = self.hard_mode_extract_des(y, words_to_remove)
-                else:
-                    output[x] = y_raw_list_des
-            else:
-                output[x] = self.extend_or_short_list(y_raw_list, number_of_items)
-            print(output[x])
-        return output
-
-    def hard_mode_extract_des(self, y, words_to_remove):
-        remove_pattern = r"\b(" + "|".join(words_to_remove) + r")\b"
-        cleaned_text = re.sub(remove_pattern, "", y, flags=re.IGNORECASE)
-        cleaned_text = re.sub(r"(?i)(TUNIQUE)(\d+)", r"TUNIQUE \2", cleaned_text)  # Ensure "TUNIQUE" is followed by a space and number
-        return re.findall(r"\b[A-Za-z]+[0-9]?\b", cleaned_text)
-
-    def extend_or_short_list(self, input_list, target_length, pad_value="0"):
-        if not any(input_list):
-            input_list = []
-        if target_length > len(input_list):
-            return input_list + [pad_value] * (target_length - len(input_list))
-        else:
-            return input_list[:target_length]
-            
-    def _get_chars_only(self, input_str:str) -> str:
-        if input_str:
-            chars_only = re.match(r'^[A-Za-z]+', input_str)
-            if chars_only:
-                output = chars_only.group()  # Extract the matched part
-                if output == "ESB":
-                    output = "ES"
-                return output
-            else:
-                logger.error(f"No alphabetic characters at the start for {input_str}")
-        else:
-            return None
 
     def get_country_code(self, country_name):
         if country_name == "MAYOTTE":
@@ -276,7 +202,7 @@ class DolvikaFactureReader:
                 continue
             remise = float(data["Rem. %"].replace(",", ".")) / 100
             if remise > 0:
-                logger.info(f"got remise: {remise}")
+                logger.info(f"got remise: {remise} for page: data['page_number']")
             invoicedAmount=round(data["Montant HT"] * (1 - remise))
             item = Item_unit(
                 itemNumber=item_number,
