@@ -48,10 +48,22 @@ class DolvikaFactureReader:
         if self.df_item_all is not None:
             return self.df_item_all
 
-    def _get_corp_1_info(self, page) -> Dict:
+    def _get_number_date_info(self, page) -> Dict:
 
-        BOUNDING_BOX = (0, self.HEIGHT * 0.30, self.WIDTH , self.HEIGHT * 0.34) 
-        corp_1 = page.crop(BOUNDING_BOX)
+        BOUNDING_BOX_1 = (0, self.HEIGHT * 0.30, self.WIDTH , self.HEIGHT * 0.34) 
+        res = self._cut_for_number_date(page, BOUNDING_BOX_1)
+        if res:
+            return res
+        else:
+            BOUNDING_BOX_2 = (0, self.HEIGHT * 0.25, self.WIDTH , self.HEIGHT * 0.30) 
+            res = self._cut_for_number_date(page, BOUNDING_BOX_2)
+            if res:
+                return res
+            else:
+                raise ValueError(f"Can't get numero & date")
+    
+    def _cut_for_number_date(self, page, box):
+        corp_1 = page.crop(box)
         lines = corp_1.extract_text_lines()
         res = lines[-1]["text"]
         pattern = r"(.+?)\s(\d{2}/\d{2}/\d{4})"
@@ -64,8 +76,6 @@ class DolvikaFactureReader:
                 "Date": Date,
             }
             return corp_1_dict
-        else:
-            raise ValueError(f"Can't get Numéro and Date")
 
     def is_country(self, name) -> bool:
         names = [name.lower(), name.split(" ")[0].lower()]
@@ -89,7 +99,7 @@ class DolvikaFactureReader:
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages[:1]):
+            for page_index, page in enumerate(pdf.pages[5:6]):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -122,26 +132,22 @@ class DolvikaFactureReader:
 
     def _get_full_df_from_page(self, page) -> pd.DataFrame:
 
-        metadata_dict = self._get_corp_1_info(page)
-        metadata_dict["page_number"] = page.page_number
+        metadata_dict = self._get_number_date_info(page)
         address_dict = self._get_address_dict(page)
         metadata_dict = {**metadata_dict, **address_dict}
         metadata_dict = self._set_or_get_metadata_dict_from_self(metadata_dict)
+        metadata_dict["page_number"] = page.page_number
         logger.debug(f"Got metadata_dict: {metadata_dict}")
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        # Regex pattern explanation:
-        # ^\d{4} → Start with 4 digits
-        # \s+\w+ → Followed by a word (the product name)
-        # (\s+\d+,\d{2})+ → Followed by space-separated numeric values in "xx,xx" format
         pattern = r"(^\d{4})\s+([\w\s']+)(\s+\d+,\d{2})+"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
             if match:
                 line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")))
-        print(line_texts)
+        print("---", line_texts)
                 
         df_item = self._get_item_df(line_texts)
         for k, v in metadata_dict.items():  # add metadata dict into df_items
@@ -219,7 +225,6 @@ class DolvikaFactureReader:
         cleaned_text = re.sub(r"(?i)(TUNIQUE)(\d+)", r"TUNIQUE \2", cleaned_text)  # Ensure "TUNIQUE" is followed by a space and number
         return re.findall(r"\b[A-Za-z]+[0-9]?\b", cleaned_text)
 
-
     def extend_or_short_list(self, input_list, target_length, pad_value="0"):
         if not any(input_list):
             input_list = []
@@ -241,6 +246,13 @@ class DolvikaFactureReader:
         else:
             return None
 
+    def get_country_code(self, country_name):
+        try:
+            country = pycountry.countries.lookup(country_name)
+            return country.alpha_2  # Returns the ISO 3166-1 Alpha-2 code (e.g., 'US', 'FR')
+        except LookupError:
+            return None  # Return None if the country is not found
+
     def _get_items(self, df:pd.DataFrame) -> List[Item_unit]:
         output_list = []
         for index, data in df.iterrows():
@@ -256,15 +268,13 @@ class DolvikaFactureReader:
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
-                # MSConsDestCode=self._get_chars_only(data["N° de Tva intracom"]),
-                MSConsDestCode="xxxxxxxx", #! to be updated
+                MSConsDestCode=self.get_country_code(data["dest_country"]),
                 countryOfOriginCode="FR",
                 netMass=round(self._get_weight(article_name=article_name) * data["Quantité"]),
                 quantityInSU=data["Quantité"],
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
-                # partnerId=data["N° de Tva intracom"],
-                partnerId="xxxxxxxxx",  #! to be updated
+                partnerId=data["N° TVA"],
                 invoicedNumber=f'X{data["Numéro"]}',    #! to double check length
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
