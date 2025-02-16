@@ -114,7 +114,6 @@ class DolvikaFactureReader:
                     if not df_item.empty:
                         dfs.append(df_item)
                     else:
-                        logger.warning(f"Skipped because N° de Tva intracom is not good")
                         self._pages_to_double_check.append(page.page_number)
                 except Exception as e:
                     logger.error(f"Error while processing page : {page.page_number}, skipped, error: {e}")
@@ -143,12 +142,14 @@ class DolvikaFactureReader:
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        pattern = r"(^\d*|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+\s+(\d+\s?\d+,\d{2})(\s[1])?$"
+        pattern = r"(^\d*|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+\s+(\d+\s?\d?,\d{2})(\s[1])?$"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
             if match:
                 line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")).replace(match.group(4), match.group(4).replace(" ", "")))
+            else:
+                print(x["text"])
         print(line_texts)
                 
         df_item = self._get_item_df(line_texts)
