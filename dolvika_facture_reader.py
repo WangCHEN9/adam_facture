@@ -148,8 +148,6 @@ class DolvikaFactureReader:
             match = re.search(pattern, x["text"])
             if match:
                 line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")).replace(match.group(4), match.group(4).replace(" ", "")))
-            else:
-                print(x["text"])
         print(line_texts)
                 
         df_item = self._get_item_df(line_texts)
