@@ -180,7 +180,7 @@ class DolvikaFactureReader:
             if splited_text[-1] != "1": #last one is TVA (always=1)
                 splited_text.append("1")
             if len(splited_text) == len(item_to_match) - 1:
-                splited_text.insert(4, 0)
+                splited_text.insert(4, "0")
             elif len(splited_text) < len(item_to_match) - 1:
                 raise ValueError(f"Missing column data during df_item preparison")
             df_data.append(splited_text)
@@ -274,7 +274,7 @@ class DolvikaFactureReader:
                 logger.error(f"Skipped")
                 self._pages_to_double_check.append(data["page_number"])
                 continue
-            remise = float(data["Rem. %"]) / 100
+            remise = float(data["Rem. %"].replace(",", ".")) / 100
             if remise > 0:
                 logger.info(f"got remise: {remise}")
             invoicedAmount=round(data["Montant HT"] * (1 - remise))
