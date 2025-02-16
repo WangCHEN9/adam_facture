@@ -274,8 +274,9 @@ class DolvikaFactureReader:
                 logger.error(f"Skipped")
                 self._pages_to_double_check.append(data["page_number"])
                 continue
-            remise = data["Rem. %"] / 100
-            logger.debug(f"got remise: {remise}")
+            remise = float(data["Rem. %"]) / 100
+            if remise > 0:
+                logger.info(f"got remise: {remise}")
             invoicedAmount=round(data["Montant HT"] * (1 - remise))
             item = Item_unit(
                 itemNumber=item_number,
