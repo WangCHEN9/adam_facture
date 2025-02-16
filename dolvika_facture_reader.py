@@ -213,7 +213,7 @@ class DolvikaFactureReader:
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
                 partnerId=data["N° TVA"],
-                invoicedNumber=f'X{data["Numéro"]}',    #! to double check length
+                invoicedNumber=data["Numéro"], 
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,

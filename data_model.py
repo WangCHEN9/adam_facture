@@ -33,7 +33,7 @@ class Item_unit(BaseModel):
     quantityInSU: Optional[int] = Field(None, ge=0, le=9999999999, description="Quantity in supplementary units")
     invoicedAmount: int = Field(..., gt=0, le=99999999999, description="Invoice amount in euros")
     partnerId: Optional[str] = Field(None, description="Partner's VAT number (ISO country + number)")
-    invoicedNumber: Optional[str] = Field(default=None, min_length=8, max_length=8, description="invoicedNumber (8 alphanumériques)")
+    invoicedNumber: Optional[str] = Field(default=None, min_length=2, max_length=8, description="invoicedNumber (8 alphanumériques)")
     statisticalProcedureCode: int = Field(..., description="Statistical procedure code")
     NatureOfTransaction: Optional[Dict]
     modeOfTransportCode: Optional[int] = Field(None, ge=1, le=9, description="Mode of transport code")

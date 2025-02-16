@@ -250,7 +250,7 @@ class JessyFactureReader:
                 logger.error(f"Skipped")
                 self._pages_to_double_check.append(data["page_number"])
                 continue
-            invoicedAmount=round(data["Montant HT"] * (1 - 0))  #! to be updated for remise
+            invoicedAmount=round(data["Montant HT"] * (1 - data["% REM"]/100))
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
@@ -261,7 +261,7 @@ class JessyFactureReader:
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
                 partnerId=data["N° TVA"],
-                invoicedNumber=f'FA{data["Facture N°"]}',   #! to be confirmed
+                invoicedNumber=data["Facture N°"],  
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,
