@@ -202,7 +202,7 @@ class DolvikaFactureReader:
                 continue
             remise = float(data["Rem. %"].replace(",", ".")) / 100
             if remise > 0:
-                logger.info(f"got remise: {remise} for page: data['page_number']")
+                logger.info(f"got remise: {remise} for page: {data['page_number']}")
             invoicedAmount=round(data["Montant HT"] * (1 - remise))
             item = Item_unit(
                 itemNumber=item_number,
