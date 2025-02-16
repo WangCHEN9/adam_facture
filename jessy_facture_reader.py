@@ -8,6 +8,7 @@ import pdfplumber
 from loguru import logger
 import pandas as pd
 import numpy as np
+import pycountry
 
 from data_model import Party, Item_unit, Declaration_unit, CN8, Envelope, DateTime, Function, Instat
 from article_info import Article_Info
@@ -30,6 +31,8 @@ class JessyFactureReader:
         self._previous_page_metadata = {}
         self._pages_to_double_check = []
         self.df_item_all = None
+        self.HEIGHT = 841.92004
+        self.WIDTH = 595.32001
 
     @property
     def pages_to_double_check(self) -> List:
@@ -44,10 +47,37 @@ class JessyFactureReader:
         if self.df_item_all is not None:
             return self.df_item_all
 
+    def _get_address_dict(self, page) -> Dict:
+        BOUNDING_BOX = (self.WIDTH * 0.42, self.HEIGHT * 0.08, self.WIDTH , self.HEIGHT * 0.20) 
+        corp_1 = page.crop(BOUNDING_BOX)
+        lines = corp_1.extract_text_lines()
+        country = None
+        tva_number = None
+        for x in lines:
+            if self.is_country(x["text"]):
+                country = x["text"].strip()
+            if self.is_tva(x["text"]):
+                tva_number = x["text"].strip()
+        return {"dest_country": country, "N° TVA": tva_number}
+
+    def is_tva(self, text) -> bool:
+        pattern = r"^\w{2}\w?\d+\w*\d+$"
+        if re.match(pattern, text):
+            return True
+        else:
+            return False
+
+    def is_country(self, name) -> bool:
+        if name in ["BELGIQUE", "MAYOTTE", "Pays-Bas"]:
+            return True
+        names = [name.lower(), name.split(" ")[0].lower()]
+        def _is_country(name):
+            return any(country.name.lower() == name.lower() for country in pycountry.countries)
+        return any(_is_country(x) for x in names)
+
     def _get_corp_1_info(self, page) -> Dict:
-        HEIGHT = 841.92004
-        WIDTH = 595.32001
-        BOUNDING_BOX_1 = (WIDTH * 3/8, 0, WIDTH , HEIGHT * 1.8/22.5) 
+
+        BOUNDING_BOX_1 = (self.WIDTH * 3/8, 0, self.WIDTH , self.HEIGHT * 1.8/22.5) 
         corp_1 = page.crop(BOUNDING_BOX_1)
         lines = corp_1.extract_text_lines()
         res = lines[-1]["text"].split(" ")
@@ -62,7 +92,7 @@ class JessyFactureReader:
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages):
+            for page_index, page in enumerate(pdf.pages[106:117]):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -75,7 +105,6 @@ class JessyFactureReader:
                     if not df_item.empty:
                         dfs.append(df_item)
                     else:
-                        logger.warning(f"Skipped because N° de Tva intracom is not good")
                         self._pages_to_double_check.append(page.page_number)
                 except Exception as e:
                     logger.error(f"Error while processing page : {page.page_number}, skipped, error: {e}")
@@ -91,10 +120,11 @@ class JessyFactureReader:
 
         tables = page.find_tables()
         metadata_dict = self._get_corp_1_info(page)
+        address_dict = self._get_address_dict(page)
+        metadata_dict = {**metadata_dict, **address_dict}
         metadata_dict["page_number"] = page.page_number
         table = tables[0]
         raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
-        print(raw_data)
                 
         df_item = self._get_item_df(raw_data)
         df_item = df_item[df_item["Désignation"] != "FRAISTRANSPORT"]  #! to check if OK doing this
@@ -165,7 +195,6 @@ class JessyFactureReader:
                     output[x] = y_raw_list_des
             else:
                 output[x] = self.extend_or_short_list(y_raw_list, number_of_items)
-            print(output[x])
         return output
 
     def hard_mode_extract_des(self, y, words_to_remove):
@@ -183,18 +212,32 @@ class JessyFactureReader:
         else:
             return input_list[:target_length]
             
-    def _get_chars_only(self, input_str:str) -> str:
-        if input_str:
-            chars_only = re.match(r'^[A-Za-z]+', input_str)
+    def _get_dest_code(self, tva:str, dest_country:str) -> str:
+        if tva:
+            chars_only = re.match(r'^[A-Za-z]+', tva)
             if chars_only:
                 output = chars_only.group()  # Extract the matched part
                 if output == "ESB":
                     output = "ES"
-                return output
             else:
-                logger.error(f"No alphabetic characters at the start for {input_str}")
+                logger.error(f"No alphabetic characters at the start for {tva}")
         else:
-            return None
+            output = self.get_country_code(country_name=dest_country)
+        logger.debug(f"Got dest_country_code: {output}")
+        return output
+
+    def get_country_code(self, country_name):
+        if country_name == "MAYOTTE":
+            return "FR"
+        try:
+            country = pycountry.countries.lookup(country_name)
+            return country.alpha_2  # Returns the ISO 3166-1 Alpha-2 code (e.g., 'US', 'FR')
+        except LookupError:
+            logger.warning(f"Can't get_country_code from {country_name}, return first 2 chars")
+            if country_name:
+                return country_name[:2]
+            else:
+                logger.warning(f"Got empty country_name: {country_name}")
 
     def _get_items(self, df:pd.DataFrame) -> List[Item_unit]:
         output_list = []
@@ -211,14 +254,13 @@ class JessyFactureReader:
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
-                # MSConsDestCode=self._get_chars_only(data["N° de Tva intracom"]),
-                MSConsDestCode="xxxxxxxx", #! to be updated
+                MSConsDestCode=self._get_dest_code(data["N° TVA"], data["dest_country"]),
                 countryOfOriginCode="FR",
                 netMass=round(self._get_weight(article_name=article_name) * data["Quantité"]),
                 quantityInSU=data["Quantité"],
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
-                # partnerId=data["N° de Tva intracom"], #! no TVA
+                partnerId=data["N° TVA"],
                 invoicedNumber=f'FA{data["Facture N°"]}',   #! to be confirmed
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
