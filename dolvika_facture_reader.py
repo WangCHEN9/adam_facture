@@ -78,6 +78,8 @@ class DolvikaFactureReader:
             return corp_1_dict
 
     def is_country(self, name) -> bool:
+        if name in ["BELGIQUE"]:
+            return True
         names = [name.lower(), name.split(" ")[0].lower()]
         def _is_country(name):
             return any(country.name.lower() == name.lower() for country in pycountry.countries)
@@ -99,7 +101,7 @@ class DolvikaFactureReader:
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages[5:6]):
+            for page_index, page in enumerate(pdf.pages[9:10]):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -141,13 +143,13 @@ class DolvikaFactureReader:
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        pattern = r"(^\d{4})\s+([\w\s']+)(\s+\d+,\d{2})+"
+        pattern = r"(^\d{4}|BB)\s+([\w\s']+)(\s+\d+,\d{2})+"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
             if match:
                 line_texts.append(x["text"].replace(match.group(2), match.group(2).replace(" ", "")))
-        print("---", line_texts)
+        print(line_texts)
                 
         df_item = self._get_item_df(line_texts)
         for k, v in metadata_dict.items():  # add metadata dict into df_items
@@ -175,10 +177,12 @@ class DolvikaFactureReader:
         df_data = []
         for data in raw_data:
             splited_text: List = data.split(" ")
+            if splited_text[-1] != "1": #last one is TVA (always=1)
+                splited_text.append("1")
             if len(splited_text) == len(item_to_match) - 1:
                 splited_text.insert(4, 0)
             elif len(splited_text) < len(item_to_match) - 1:
-                raise ValueError(f"Data missing during extract from table")
+                raise ValueError(f"Missing column data during df_item preparison")
             df_data.append(splited_text)
         df = pd.DataFrame.from_records(df_data, columns=item_to_match)
         numeric_columns = ["Quantité", "P.U. HT", "Montant HT", "TVA"]
@@ -251,7 +255,8 @@ class DolvikaFactureReader:
             country = pycountry.countries.lookup(country_name)
             return country.alpha_2  # Returns the ISO 3166-1 Alpha-2 code (e.g., 'US', 'FR')
         except LookupError:
-            return None  # Return None if the country is not found
+            logger.warning(f"Can't get_country_code from {country_name}, return first 2 chars: {country_name[:2]}")
+            return country_name[:2]
 
     def _get_items(self, df:pd.DataFrame) -> List[Item_unit]:
         output_list = []
