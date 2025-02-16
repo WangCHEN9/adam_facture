@@ -65,20 +65,20 @@ class DolvikaFactureReader:
     def _cut_for_number_date(self, page, box):
         corp_1 = page.crop(box)
         lines = corp_1.extract_text_lines()
-        res = lines[-1]["text"]
         pattern = r"(.+?)\s(\d{2}/\d{2}/\d{4})"
-        match = re.search(pattern, res)
-        if match:
-            facture_number = match.group(1).replace(" ", "")
-            Date = match.group(2)
-            corp_1_dict = {
-                "Numéro": facture_number,
-                "Date": Date,
-            }
-            return corp_1_dict
+        for line in lines:
+            match = re.search(pattern, line["text"])
+            if match:
+                facture_number = match.group(1).replace(" ", "")
+                Date = match.group(2)
+                corp_1_dict = {
+                    "Numéro": facture_number,
+                    "Date": Date,
+                }
+                return corp_1_dict
 
     def is_country(self, name) -> bool:
-        if name in ["BELGIQUE"]:
+        if name in ["BELGIQUE", "MAYOTTE"]:
             return True
         names = [name.lower(), name.split(" ")[0].lower()]
         def _is_country(name):
@@ -101,7 +101,7 @@ class DolvikaFactureReader:
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages[9:10]):
+            for page_index, page in enumerate(pdf.pages):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
@@ -143,7 +143,7 @@ class DolvikaFactureReader:
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        pattern = r"(^\d{4}|BB)\s+([\w\s']+)(\s+\d+,\d{2})+"
+        pattern = r"(^\d{4}|BB|PSE|PRE50)\s+([\w\s']+)(\s+\d+,\d{2})+"
         line_texts = []
         for x in lines:
             match = re.search(pattern, x["text"])
@@ -251,12 +251,17 @@ class DolvikaFactureReader:
             return None
 
     def get_country_code(self, country_name):
+        if country_name == "MAYOTTE":
+            return "FR"
         try:
             country = pycountry.countries.lookup(country_name)
             return country.alpha_2  # Returns the ISO 3166-1 Alpha-2 code (e.g., 'US', 'FR')
         except LookupError:
-            logger.warning(f"Can't get_country_code from {country_name}, return first 2 chars: {country_name[:2]}")
-            return country_name[:2]
+            logger.warning(f"Can't get_country_code from {country_name}, return first 2 chars")
+            if country_name:
+                return country_name[:2]
+            else:
+                logger.warning(f"Got empty country_name: {country_name}")
 
     def _get_items(self, df:pd.DataFrame) -> List[Item_unit]:
         output_list = []
@@ -269,7 +274,9 @@ class DolvikaFactureReader:
                 logger.error(f"Skipped")
                 self._pages_to_double_check.append(data["page_number"])
                 continue
-            invoicedAmount=round(data["Montant HT"] * (1 - 0))  #! to be updated for remise
+            remise = data["Rem. %"] / 100
+            logger.debug(f"got remise: {remise}")
+            invoicedAmount=round(data["Montant HT"] * (1 - remise))
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,
