@@ -8,6 +8,7 @@ import pdfplumber
 from loguru import logger
 import pandas as pd
 import numpy as np
+import pycountry
 
 from data_model import Party, Item_unit, Declaration_unit, CN8, Envelope, DateTime, Function, Instat
 from article_info import Article_Info
@@ -32,6 +33,7 @@ class DolvikaFactureReader:
         self.df_item_all = None
         self.HEIGHT = 841.92004
         self.WIDTH = 595.32001
+        self.metadata_all = {}
 
     @property
     def pages_to_double_check(self) -> List:
@@ -65,6 +67,25 @@ class DolvikaFactureReader:
         else:
             raise ValueError(f"Can't get Numéro and Date")
 
+    def is_country(self, name) -> bool:
+        names = [name.lower(), name.split(" ")[0].lower()]
+        def _is_country(name):
+            return any(country.name.lower() == name.lower() for country in pycountry.countries)
+        return any(_is_country(x) for x in names)
+
+    def _get_address_dict(self, page) -> Dict:
+        BOUNDING_BOX = (self.WIDTH/2, self.HEIGHT * 0.10, self.WIDTH , self.HEIGHT * 0.28) 
+        corp_1 = page.crop(BOUNDING_BOX)
+        lines = corp_1.extract_text_lines()
+        country = None
+        tva_number = None
+        for x in lines:
+            if self.is_country(x["text"]):
+                country = x["text"].split(" ")[0]
+            if x["text"].startswith("N° TVA"):
+                tva_number = x["text"].split(":")[-1].strip()
+        return {"dest_country": country, "N° TVA": tva_number}
+
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
@@ -93,10 +114,20 @@ class DolvikaFactureReader:
             instat = Instat(Envelope=envelope)
             return instat
 
+    def _set_or_get_metadata_dict_from_self(self, metadata_dict:Dict) -> Dict:
+        if not self.metadata_all.get(metadata_dict["Numéro"]):
+            # if first time see the Numéro, add it into self
+            self.metadata_all[metadata_dict["Numéro"]] = metadata_dict
+        return self.metadata_all[metadata_dict["Numéro"]]
+
     def _get_full_df_from_page(self, page) -> pd.DataFrame:
 
         metadata_dict = self._get_corp_1_info(page)
         metadata_dict["page_number"] = page.page_number
+        address_dict = self._get_address_dict(page)
+        metadata_dict = {**metadata_dict, **address_dict}
+        metadata_dict = self._set_or_get_metadata_dict_from_self(metadata_dict)
+        logger.debug(f"Got metadata_dict: {metadata_dict}")
         BOUNDING_BOX = (0, self.HEIGHT * 0.38, self.WIDTH , self.HEIGHT) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
