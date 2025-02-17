@@ -17,7 +17,7 @@ from article_info import Article_Info
 class JessyFactureReader:
 
     party = Party(**{
-        "partyId":"FR0979124578000000",  #! last 5 numbers to be updated!
+        "partyId":"FR0979124578000030",
         "partyName":"Jessy & co",
     })
     party_tag = r'<Party partyType="TDP" partyRole="sender">'
@@ -127,7 +127,7 @@ class JessyFactureReader:
         raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
                 
         df_item = self._get_item_df(raw_data)
-        df_item = df_item[df_item["Désignation"] != "FRAISTRANSPORT"]  #! to check if OK doing this
+        df_item = df_item[df_item["Désignation"] != "FRAISTRANSPORT"]
         for k, v in metadata_dict.items():  # add metadata dict into df_items
             df_item[k] = v
         return df_item
