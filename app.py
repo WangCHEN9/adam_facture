@@ -2,6 +2,8 @@ import streamlit as st
 from pathlib import Path
 from article_info import Article_Info
 from ivivi_facture_reader import IviviFactureReader
+from jessy_facture_reader import JessyFactureReader
+from dolvika_facture_reader import DolvikaFactureReader
 from loguru import logger
 import shutil
 import pandas as pd
@@ -26,6 +28,8 @@ def main(output_folder_path, log_folder_path):
 
     func_mapping = {
         "IVIVI": IviviFactureReader,
+        "Jessy & co": JessyFactureReader,
+        "DOLVIKA": DolvikaFactureReader,
     }
     process_func = func_mapping[company_name]
 
