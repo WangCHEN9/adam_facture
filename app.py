@@ -30,7 +30,7 @@ def main(output_folder_path, log_folder_path):
         "Jessy & co": JessyFactureReader,
         "DOLVIKA": DolvikaFactureReader,
     }
-    company_name = st.sidebar.selectbox("Select Company", list(func_mapping.keps()))
+    company_name = st.sidebar.selectbox("Select Company", list(func_mapping.keys()))
     process_func = func_mapping[company_name]
 
     article_info_excel = Path("data/DONNEES DOUANE PYTHON.xlsx")
