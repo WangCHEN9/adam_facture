@@ -92,7 +92,7 @@ class JessyFactureReader:
     def get_instat(self) -> Instat:
         with pdfplumber.open(self.pdf_path) as pdf:
             dfs = []
-            for page_index, page in enumerate(pdf.pages[106:117]):
+            for page_index, page in enumerate(pdf.pages):
                 text = page.extract_text_simple()
                 if page.page_number == 1:
                     # just to double check if the pdf is matched with party name
