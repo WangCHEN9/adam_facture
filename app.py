@@ -64,9 +64,9 @@ def main(output_folder_path, log_folder_path):
                 output_folder_path=output_folder_path
             )
             if not reader.if_xml:
-                st.warning(f"No XML file will be generated for {reader.party.party_name}, only excel file will be generated")
+                st.warning(f"No XML file will be generated for {reader.party.partyName}, only excel file will be generated")
             else:
-                st.success(f"Both XML and excel file will be generated for {reader.party.party_name}")
+                st.success(f"Both XML and excel file will be generated for {reader.party.partyName}")
             if not st.session_state["process_done"]:
                 logger.debug(f"start to process, as session_state process_done: {st.session_state['process_done']}")
                 with st.status("Running"):
