@@ -8,7 +8,7 @@ pip install -r requirements.txt
 
 ## What this repo do
 
-1. Read pdf facture
+1. Read pdf facture (each company have its own reader)
 2. Combine with excel input data
 3. Output required xml file
 
