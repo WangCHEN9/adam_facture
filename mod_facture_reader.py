@@ -39,6 +39,13 @@ class ModFactureReader:
     def pages_to_double_check(self) -> List:
         return self._pages_to_double_check
 
+    def is_tva(self, text) -> bool:
+        pattern = r"^\w{2}\w?\d+\w*\d+$"
+        if re.match(pattern, text):
+            return True
+        else:
+            return False
+
     def run(self) -> Union[pd.DataFrame, None]:
         instat = self.get_instat()
         logger.warning(f"All page_numbers (skipped) to double check : {self._pages_to_double_check}")
@@ -50,8 +57,10 @@ class ModFactureReader:
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
         lines = [x["text"] for x in lines]
-        address_dict =  {"address": ", ".join(lines)}
-        print(address_dict)
+        if self.is_tva(lines[-1]):
+            address_dict =  {"address": ", ".join(lines[:-1]), "N° TVA": lines[-1]}
+        else:
+            address_dict =  {"address": ", ".join(lines), "N° TVA": ""}
         return address_dict
 
     def _get_metadata_info(self, page) -> Dict:
@@ -64,7 +73,6 @@ class ModFactureReader:
             "Facture n°": lines[0].split("Facture n°")[-1].strip(),
             "Date": lines[1].split(":")[-1].strip(),
         }
-        print(invoice_metadata)
         return invoice_metadata
 
     def get_instat(self) -> Instat:
@@ -100,7 +108,6 @@ class ModFactureReader:
         metadata_dict["page_number"] = page.page_number
         table = tables[0]
         raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
-        print(raw_data)
                 
         df_item = self._get_item_df(raw_data)
         for k, v in metadata_dict.items():  # add metadata dict into df_items
