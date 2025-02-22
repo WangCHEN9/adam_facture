@@ -23,6 +23,7 @@ class JessyFactureReader:
     party_tag = r'<Party partyType="TDP" partyRole="sender">'
     envelopeId = "L5B7"
     declarationTypeCode = 1     # 1 or 4 depends on company,
+    if_xml: bool = True
 
     def __init__(self, pdf_path:Path, article_info: Article_Info, output_folder_path:Path) -> None:
         self.pdf_path = pdf_path

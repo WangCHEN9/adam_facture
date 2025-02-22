@@ -4,6 +4,7 @@ from article_info import Article_Info
 from ivivi_facture_reader import IviviFactureReader
 from jessy_facture_reader import JessyFactureReader
 from dolvika_facture_reader import DolvikaFactureReader
+from mod_facture_reader import ModFactureReader
 from loguru import logger
 import shutil
 import pandas as pd
@@ -29,6 +30,7 @@ def main(output_folder_path, log_folder_path):
         "IVIVI": IviviFactureReader,
         "Jessy & co": JessyFactureReader,
         "DOLVIKA": DolvikaFactureReader,
+        "MODE CMD": ModFactureReader,
     }
     company_name = st.sidebar.selectbox("Select Company", list(func_mapping.keys()))
     process_func = func_mapping[company_name]
@@ -61,6 +63,10 @@ def main(output_folder_path, log_folder_path):
                 article_info=article_info, 
                 output_folder_path=output_folder_path
             )
+            if not reader.if_xml:
+                st.warning(f"No XML file will be generated for {reader.party.party_name}, only excel file will be generated")
+            else:
+                st.success(f"Both XML and excel file will be generated for {reader.party.party_name}")
             if not st.session_state["process_done"]:
                 logger.debug(f"start to process, as session_state process_done: {st.session_state['process_done']}")
                 with st.status("Running"):
@@ -91,7 +97,8 @@ def main(output_folder_path, log_folder_path):
                     )
                 st.success(f"Successful created xml file, and validated with xsd validation")
             else:
-                st.error(f"Error while creating xml file")
+                if reader.if_xml:
+                    st.error(f"Error while creating xml file")
 
             if log_file_path.exists():
                 with open(log_file_path, "rb") as f:
