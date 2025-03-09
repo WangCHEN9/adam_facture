@@ -104,7 +104,14 @@ class JessyFactureReader:
                     df_item = self._get_full_df_from_page(page=page)
                     print(df_item)
                     if not df_item.empty:
-                        dfs.append(df_item)
+                        # Check if all string lengths in the TVA column are greater than 3, which is a valid TVA
+                        is_good_tva = df_item['N° de Tva intracom'].str.len().gt(3).all()
+                        logger.debug(f"Checked is_good_tva: {is_good_tva}")
+                        if is_good_tva:
+                            dfs.append(df_item)
+                        else:
+                            logger.warning(f"Skipped because N° de Tva intracom is not good")
+                            self._pages_to_double_check.append(page.page_number)
                     else:
                         self._pages_to_double_check.append(page.page_number)
                 except Exception as e:
