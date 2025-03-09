@@ -69,7 +69,7 @@ class JessyFactureReader:
             return False
 
     def is_country(self, name) -> bool:
-        if name in ["BELGIQUE", "MAYOTTE", "Pays-Bas"]:
+        if name in ["BELGIQUE", "MAYOTTE", "Pays-Bas", "SUISSE", "ESPAGNE", "ITALIE", "ALLEMAGNE", "PORTUGAL", "ROYAUME-UNI", "FRANCE", "LUXEMBOURG", "POLOGNE", "TUNISIE", "MAROC", "TURQUIE", "CHINE", "USA", "CANADA", "JAPON", "COREE DU SUD", "INDE", "BRESIL", "AUSTRALIE", "AFRIQUE DU SUD", "NIGERIA",]:
             return True
         names = [name.lower(), name.split(" ")[0].lower()]
         def _is_country(name):
@@ -105,12 +105,12 @@ class JessyFactureReader:
                     print(df_item)
                     if not df_item.empty:
                         # Check if all string lengths in the TVA column are greater than 3, which is a valid TVA
-                        is_good_tva = df_item['N° de Tva intracom'].str.len().gt(3).all()
+                        is_good_tva = df_item['N° TVA'].str.len().gt(3).all()
                         logger.debug(f"Checked is_good_tva: {is_good_tva}")
                         if is_good_tva:
                             dfs.append(df_item)
                         else:
-                            logger.warning(f"Skipped because N° de Tva intracom is not good")
+                            logger.warning(f"Skipped because N° TVA is not good")
                             self._pages_to_double_check.append(page.page_number)
                     else:
                         self._pages_to_double_check.append(page.page_number)
@@ -237,6 +237,8 @@ class JessyFactureReader:
     def get_country_code(self, country_name):
         if country_name == "MAYOTTE":
             return "FR"
+        elif country_name == "SUISSE":
+            return "CH"
         try:
             country = pycountry.countries.lookup(country_name)
             return country.alpha_2  # Returns the ISO 3166-1 Alpha-2 code (e.g., 'US', 'FR')
