@@ -69,7 +69,7 @@ class JessyFactureReader:
             return False
 
     def is_country(self, name) -> bool:
-        if str(name).upper() in ["BELGIQUE", "MAYOTTE", "Pays-Bas", "SUISSE", "ESPAGNE", "ITALIE", "ALLEMAGNE", "PORTUGAL", "ROYAUME-UNI", "FRANCE", "LUXEMBOURG", "POLOGNE", "TUNISIE", "MAROC", "TURQUIE", "CHINE", "USA", "CANADA", "JAPON", "COREE DU SUD", "INDE", "BRESIL", "AUSTRALIE", "AFRIQUE DU SUD", "NIGERIA",]:
+        if str(name).upper() in ["BELGIQUE", "MAYOTTE", "PAYS-BAS", "SUISSE", "ESPAGNE", "ITALIE", "ALLEMAGNE", "PORTUGAL", "ROYAUME-UNI", "FRANCE", "LUXEMBOURG", "POLOGNE", "TUNISIE", "MAROC", "TURQUIE", "CHINE", "USA", "CANADA", "JAPON", "COREE DU SUD", "INDE", "BRESIL", "AUSTRALIE", "AFRIQUE DU SUD", "NIGERIA",]:
             return True
         names = [name.lower(), name.split(" ")[0].lower()]
         def _is_country(name):
