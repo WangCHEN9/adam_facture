@@ -106,11 +106,13 @@ class JessyFactureReader:
                     if not df_item.empty:
                         # Check if all string lengths in the TVA column are greater than 3, which is a valid TVA
                         is_good_tva = df_item['N° TVA'].str.len().gt(3).all()
+                        # check if dest_country is FR(France) or not using starts with "FR"
+                        is_to_fr = df_item['dest_country'].str.startswith("FR").all()
                         logger.debug(f"Checked is_good_tva: {is_good_tva}")
-                        if is_good_tva:
+                        if is_good_tva and not is_to_fr:
                             dfs.append(df_item)
                         else:
-                            logger.warning(f"Skipped because N° TVA is not good")
+                            logger.warning(f"Skipped because N° TVA is not good or dest_country is FR: {page.page_number}")
                             self._pages_to_double_check.append(page.page_number)
                     else:
                         self._pages_to_double_check.append(page.page_number)
