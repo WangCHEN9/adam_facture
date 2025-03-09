@@ -182,7 +182,7 @@ class DolvikaFactureReader:
                 raise ValueError(f"Missing column data during df_item preparison")
             df_data.append(splited_text.copy())
         df = pd.DataFrame.from_records(df_data, columns=item_to_match)
-        numeric_columns = ["Quantité", "P.U. HT", "Montant HT", "TVA"]
+        numeric_columns = ["Quantité", "P.U. HT", "Montant HT"]
         for col in numeric_columns:
             df[col] = df[col].str.replace(',', '.')
             df[col] = df[col].str.replace(' ', '')
