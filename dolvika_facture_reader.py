@@ -67,6 +67,7 @@ class DolvikaFactureReader:
         corp_1 = page.crop(box)
         lines = corp_1.extract_text_lines()
         pattern = r"(.+?)\s(\d{2}/\d{2}/\d{4})"
+        pattern_2 = pattern + r".*\s+CEE\s+(.+)"
         for line in lines:
             match = re.search(pattern, line["text"])
             if match:
@@ -76,6 +77,11 @@ class DolvikaFactureReader:
                     "Numéro": facture_number,
                     "Date": Date,
                 }
+                match_2 = re.search(pattern_2, line["text"])
+                if match_2:
+                    corp_1_dict["CEE"] = match_2.group(3)
+                else:
+                    corp_1_dict["CEE"] = ""
                 return corp_1_dict
 
     def is_country(self, name) -> bool:
