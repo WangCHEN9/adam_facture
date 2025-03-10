@@ -172,6 +172,8 @@ class JessyFactureReader:
                     df[col] = df[col].str.replace(' ', '')
                     df[col] = df[col].astype(float)
                 df['remis_check'] = (df['Quantité'] * df['P.U. HT'] * df['% REM']/100).round(2) == df['Remise HT']
+                # round Montant HT
+                df['Montant HT'] = df['Montant HT'].round()
                 if not df['remis_check'].all():
                     raise ValueError("One or more rows failed the Remis_check")
                 return df
