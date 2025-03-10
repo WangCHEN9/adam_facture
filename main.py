@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     logger.add(log_file_path, level="INFO")
 
-    x = DolvikaFactureReader(pdf_path=pdf_path, article_info=article_info, output_folder_path=output_folder_path)
+    x = JessyFactureReader(pdf_path=pdf_path, article_info=article_info, output_folder_path=output_folder_path)
     df = x.run()
     if isinstance(df, pd.DataFrame):
         df.to_excel(output_folder_path / f"{pdf_path.stem}.xlsx", index=False)
