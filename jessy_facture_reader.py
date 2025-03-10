@@ -273,7 +273,7 @@ class JessyFactureReader:
                 itemNumber=item_number,
                 CN8=cn8,
                 MSConsDestCode=self._get_dest_code(data["N° TVA"], data["dest_country"]),
-                countryOfOriginCode="FR",
+                countryOfOriginCode="IT",
                 netMass=round(self._get_weight(article_name=article_name) * data["Quantité"]),
                 quantityInSU=data["Quantité"],
                 invoicedAmount=invoicedAmount,
