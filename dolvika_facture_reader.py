@@ -189,6 +189,8 @@ class DolvikaFactureReader:
             df[col] = df[col].str.replace(',', '.')
             df[col] = df[col].str.replace(' ', '')
             df[col] = df[col].astype(float)
+        # round Montant HT
+        df['Montant HT'] = df['Montant HT'].round()
         return df
 
     def get_country_code(self, country_name):

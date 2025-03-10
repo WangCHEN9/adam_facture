@@ -193,6 +193,8 @@ class IviviFactureReader:
                     df[col] = df[col].str.replace(',', '.')
                     df[col] = df[col].str.replace(' ', '')
                     df[col] = df[col].astype(float)
+                # round Montant HT
+                df['Montant HT'] = df['Montant HT'].round()
                 return df
         return pd.DataFrame({i: [] for i in item_to_match}) # return empty df
 
