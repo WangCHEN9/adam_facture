@@ -304,7 +304,7 @@ class JessyFactureReader:
             if items:
                 # no declaration if items is empty
                 declaration = Declaration_unit(
-                    declarationId = metadata_dict["Facture N°"][-6:],
+                    declarationId = f"{year}{month}",
                     referencePeriod = f"{year}-{month}",
                     PSIId = self.party.partyId,
                     Function = Function(functionCode="O"),
