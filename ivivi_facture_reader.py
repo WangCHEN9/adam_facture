@@ -260,7 +260,7 @@ class IviviFactureReader:
                 itemNumber=item_number,
                 CN8=cn8,
                 MSConsDestCode=self._get_chars_only(data["N° de Tva intracom"]),
-                countryOfOriginCode="FR",
+                countryOfOriginCode="CN",
                 netMass=round(self._get_weight(article_name=article_name) * data["Qté"]),
                 quantityInSU=data["Qté"],
                 invoicedAmount=invoicedAmount,
