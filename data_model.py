@@ -1,5 +1,5 @@
 from typing import List, Optional, Dict, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 import xmlschema
 from pathlib import Path
 from loguru import logger
@@ -30,7 +30,7 @@ class Item_unit(BaseModel):
     MSConsDestCode: Optional[str] = Field(None, description="ISO country code of destination/provenance")
     countryOfOriginCode: Optional[str] = Field(None, description="ISO country code of origin")
     netMass: Optional[int] = Field(None, ge=0, le=9999999999, description="Net mass of goods")
-    quantityInSU: Optional[int] = Field(None, ge=0, le=9999999999, description="Quantity in supplementary units")
+    quantityInSU: Optional[float] = Field(None, ge=0, le=9999999999, description="Quantity in supplementary units")
     invoicedAmount: int = Field(..., gt=0, le=99999999999, description="Invoice amount in euros")
     partnerId: Optional[str] = Field(None, description="Partner's VAT number (ISO country + number)")
     invoicedNumber: Optional[str] = Field(default=None, min_length=2, max_length=8, description="invoicedNumber (8 alphanumériques)")
@@ -38,6 +38,13 @@ class Item_unit(BaseModel):
     NatureOfTransaction: Optional[Dict]
     modeOfTransportCode: Optional[int] = Field(None, ge=1, le=9, description="Mode of transport code")
     regionCode: Optional[str] = Field(None, pattern=r"^(\d{2}|2A|2B)$", description="Region code")
+
+    @model_validator(pre=True)
+    def check_quantityInSU_type(cls, values):
+        quantity = values.get("quantityInSU")
+        if quantity is not None and isinstance(quantity, float) and not quantity.is_integer():
+            logger.warning("quantityInSU is a float and not a whole number: %s", quantity)
+        return values
 
     def to_dict(self) -> Dict:
         main_dict = self.model_dump(exclude='CN8')
