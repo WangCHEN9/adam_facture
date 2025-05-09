@@ -68,6 +68,12 @@ class SarlZhcFactureReader:
             return False
 
     def get_country_from_tva(self, tva:str) -> str:
+        if tva.startswith("ES"):
+            return "ES"
+        if tva.startswith("ATU"):
+            return "AT"
+        if tva.startswith("EL"):
+            return "GR"
         match = re.match(r'([^\d]+)', tva)
         if match:
             return match.group(1)
@@ -105,7 +111,7 @@ class SarlZhcFactureReader:
                         # Check if all string lengths in the TVA column are greater than 3, which is a valid TVA
                         is_good_tva = df_item['N° TVA'].str.len().gt(3).all()
                         # check if dest_country is FR(France) or not using starts with "FR" or "GB"
-                        is_to_fr_or_gb = df_item['dest_country'].str.startswith("FR").any() or df_item['dest_country'].str.startswith("GB").any()
+                        is_to_fr_or_gb = df_item['dest_country'].str.startswith("FR").any() or df_item['dest_country'].str.startswith("GB").any() or df_item['dest_country'].str.startswith("CH").any() or df_item['dest_country'].str.startswith("CHE").any() or df_item['dest_country'].str.startswith("PH").any()
                         logger.debug(f"Checked is_good_tva: {is_good_tva}")
                         if is_good_tva and not is_to_fr_or_gb:
                             dfs.append(df_item)
@@ -219,7 +225,7 @@ class SarlZhcFactureReader:
                 itemNumber=item_number,
                 CN8=cn8,
                 MSConsDestCode=data["dest_country"],
-                countryOfOriginCode="IT",
+                countryOfOriginCode="CN",
                 netMass=round(self._get_weight(article_name=article_name) * data["Quantité"]),
                 quantityInSU=data["Quantité"],
                 invoicedAmount=invoicedAmount,
