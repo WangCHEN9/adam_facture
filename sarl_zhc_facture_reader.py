@@ -231,7 +231,7 @@ class SarlZhcFactureReader:
                 invoicedAmount=invoicedAmount,
                 statisticalProcedureCode=21,
                 partnerId=data["N° TVA"],
-                invoicedNumber=data["Facture N°"][:-8],  
+                invoicedNumber=data["Facture N°"][-8:],  
                 NatureOfTransaction={
                     "natureOfTransactionACode":1,
                     "natureOfTransactionBCode":1,
