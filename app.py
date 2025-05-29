@@ -5,6 +5,8 @@ from ivivi_facture_reader import IviviFactureReader
 from jessy_facture_reader import JessyFactureReader
 from dolvika_facture_reader import DolvikaFactureReader
 from mod_facture_reader import ModFactureReader
+from sarl_zhc_facture_reader import SarlZhcFactureReader
+from zhc_facture_reader import ZhcFactureReader
 from loguru import logger
 import shutil
 import pandas as pd
@@ -31,6 +33,8 @@ def main(output_folder_path, log_folder_path):
         "Jessy & co": JessyFactureReader,
         "DOLVIKA": DolvikaFactureReader,
         "MODE CMD": ModFactureReader,
+        "SARL ZHC": SarlZhcFactureReader,
+        "Z.H.C": ZhcFactureReader,
     }
     company_name = st.sidebar.selectbox("Select Company", list(func_mapping.keys()))
     process_func = func_mapping[company_name]
