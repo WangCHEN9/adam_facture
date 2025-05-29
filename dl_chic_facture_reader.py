@@ -73,11 +73,20 @@ class DlChicFactureReader:
         lines = corp_1.extract_text_lines()
         res = lines[-1]["text"].split(" ")
         facture_number, date, client = res
-        corp_1_dict = {
-            "Facture N°": facture_number,
-            "Date": date,
-            "Client": client,
-        }
+        if facture_number.startswith("FA"):
+            corp_1_dict = {
+                "Facture N°": facture_number,
+                "Date": date,
+                "Client": client,
+            }
+        elif facture_number.startswith("AV"):
+            corp_1_dict = {
+                "Avoir N°": facture_number,
+                "Date": date,
+                "Client": client,
+            }
+        else:
+            raise ValueError(f"Unknown facture type: {facture_number}")
         return corp_1_dict
 
     def get_instat(self) -> Instat:
