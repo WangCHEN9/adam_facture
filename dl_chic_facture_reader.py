@@ -115,7 +115,6 @@ class DlChicFactureReader:
         metadata_dict = {**metadata_dict, **address_dict}
         metadata_dict["page_number"] = page.page_number
         table = tables[0]
-        print(f"table: {table.extract()}")
         raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
         df_item = self._get_item_df(raw_data)
         df_item = df_item[df_item["Désignation"] != "FRAIS DE TRANSPORT"]
