@@ -46,16 +46,11 @@ class DlChicFactureReader:
             return self.df_item_all
 
     def _get_address_dict(self, page) -> Dict:
-        BOUNDING_BOX = (self.WIDTH * 0.42, self.HEIGHT * 0.08, self.WIDTH , self.HEIGHT * 0.30) 
+        BOUNDING_BOX = (self.WIDTH * 0.4, self.HEIGHT * 0.08, self.WIDTH , self.HEIGHT * 0.30) 
         corp_1 = page.crop(BOUNDING_BOX)
         lines = corp_1.extract_text_lines()
-        country = None
-        tva_number = None
-        for x in lines:
-            if self.is_tva(x["text"]):
-                tva_number = x["text"].strip().split(":")[-1]
-                country = self.get_country_from_tva(tva_number)
-        return {"dest_country": country, "N° TVA": tva_number}
+        address = ", ".join([x["text"] for x in lines if x["text"].strip()])
+        return {"address": address}
 
     def is_tva(self, text) -> bool:
         match = "TVA intracom client"
@@ -112,15 +107,16 @@ class DlChicFactureReader:
             self.df_item_all = df.copy()
 
     def _get_full_df_from_page(self, page) -> pd.DataFrame:
-
-        tables = page.find_tables()
+        BOUNDING_BOX = (0, self.HEIGHT * 0.3, self.WIDTH , self.HEIGHT) 
+        cropped_page = page.crop(BOUNDING_BOX)
+        tables = cropped_page.find_tables()
         metadata_dict = self._get_corp_1_info(page)
         address_dict = self._get_address_dict(page)
         metadata_dict = {**metadata_dict, **address_dict}
         metadata_dict["page_number"] = page.page_number
         table = tables[0]
+        print(f"table: {table.extract()}")
         raw_data = self._remove_empty_items(table.extract())    # remove things like ["", None, None, None, None]
-                
         df_item = self._get_item_df(raw_data)
         df_item = df_item[df_item["Désignation"] != "FRAIS DE TRANSPORT"]
         for k, v in metadata_dict.items():  # add metadata dict into df_items
