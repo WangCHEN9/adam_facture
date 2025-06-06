@@ -231,6 +231,8 @@ class JessyFactureReader:
                 output = chars_only.group()  # Extract the matched part
                 if output == "ESB":
                     output = "ES"
+            elif re.match(r'^[0-9]{5}$', tva):
+                output = "FR"
             else:
                 logger.error(f"No alphabetic characters at the start for {tva}")
         else:
