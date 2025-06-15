@@ -3,3 +3,4 @@ input/
 __pycache__
 output/
 *.csv
+cli_test/
