@@ -6,4 +6,5 @@ output/
 cli_test/
 build/
 cli.spec
-dist/cli.exe
+dist/
+facture_parser.spec
