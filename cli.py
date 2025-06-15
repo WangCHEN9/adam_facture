@@ -1,4 +1,3 @@
-import argparse
 from pathlib import Path
 from article_info import Article_Info
 from ivivi_facture_reader import IviviFactureReader
@@ -13,13 +12,12 @@ import sys
 
 func_mapping = {
     "IVIVI": IviviFactureReader,
-    "JESSY": JessyFactureReader,
+    "Jessy & co": JessyFactureReader,
     "DOLVIKA": DolvikaFactureReader,
-    "MODE_CMD": ModFactureReader,
-    "SARL_ZHC": SarlZhcFactureReader,
-    "ZHC": ZhcFactureReader,
+    "MODE CMD": ModFactureReader,
+    "SARL ZHC": SarlZhcFactureReader,
+    "Z.H.C": ZhcFactureReader,
 }
-
 
 def detect_company_from_folder(path: Path) -> str:
     folder_name = path.name.upper()
@@ -29,24 +27,42 @@ def detect_company_from_folder(path: Path) -> str:
     raise ValueError(f"Company name not detected in folder: {folder_name}, supported companies: {', '.join(func_mapping.keys())}")
 
 
-def process_all_pdfs(company_folder: Path):
-    company_name = detect_company_from_folder(company_folder)
-    if not company_name:
-        print(f"Cannot detect company name from folder: {company_folder.name}")
-        print(f"Supported: {', '.join(func_mapping.keys())}")
-        sys.exit(1)
-    logger.success(f"Detected company: {company_name}")
-    input_path = company_folder
-    output_path = company_folder / "output"
+def main():
+    working_dir = Path.cwd()
+    input_path = working_dir
+    output_path = working_dir / "output"
+    excel_path = working_dir / "DONNEES DOUANE PYTHON.xlsx"
+
+    # Create output folders if not exist
     output_path.mkdir(parents=True, exist_ok=True)
     log_dir = output_path / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    article_info_excel = Path("data/DONNEES DOUANE PYTHON.xlsx")
-    article_info = Article_Info(source_excel=article_info_excel)
+    # Detect company
+    company_name = detect_company_from_folder(working_dir)
+    if not company_name:
+        print(f"❌ Cannot detect company name from folder: {working_dir.name}")
+        print(f"Supported companies: {', '.join(func_mapping.keys())}")
+        input("Press Enter to exit...")
+        sys.exit(1)
+
+    # Load article info
+    if not excel_path.exists():
+        print(f"❌ Required Excel file not found: {excel_path}")
+        input("Press Enter to exit...")
+        sys.exit(1)
+
+    article_info = Article_Info(source_excel=excel_path)
     reader_class = func_mapping[company_name]
 
-    for pdf_file in input_path.glob("*.pdf"):
+    # Process PDFs
+    pdf_files = list(input_path.glob("*.pdf"))
+    if not pdf_files:
+        print(f"⚠️ No PDF files found in {input_path}")
+        input("Press Enter to exit...")
+        return
+
+    for pdf_file in pdf_files:
         log_file_path = log_dir / f"{pdf_file.stem}.log"
         if log_file_path.exists():
             log_file_path.unlink()
@@ -61,20 +77,14 @@ def process_all_pdfs(company_folder: Path):
             df = reader.run()
             if isinstance(df, pd.DataFrame):
                 df.to_excel(output_path / f"{pdf_file.stem}.xlsx", index=False)
-            logger.remove()
+            print(f"✅ Processed: {pdf_file.name}")
         except Exception as e:
             logger.error(f"Failed to process {pdf_file.name}: {e}")
+            print(f"❌ Error processing {pdf_file.name}: {e}")
+        finally:
             logger.remove()
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Batch process invoices by folder.")
-    parser.add_argument("company_folder", type=Path, help="Folder containing input/output folders")
-
-    args = parser.parse_args()
-    logger.info(f"Processing company folder: {args.company_folder}")
-    process_all_pdfs(args.company_folder)
-
+    input("✔️ Finished processing. Press Enter to exit...")
 
 if __name__ == "__main__":
     main()

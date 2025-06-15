@@ -4,3 +4,6 @@ __pycache__
 output/
 *.csv
 cli_test/
+build/
+cli.spec
+dist/cli.exe
