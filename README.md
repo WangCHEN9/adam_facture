@@ -25,6 +25,6 @@ pip install -r requirements.txt
 ## How to create the `.exe`
 
 ```bash
-pyinstaller --onefile cli.py --name=facture_parser
+pyinstaller --onefile cli.py --name=facture_parser --add-data "xsd_valide.xsd;."
 ```
 

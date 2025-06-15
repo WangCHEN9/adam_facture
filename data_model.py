@@ -4,6 +4,7 @@ import xmlschema
 from pathlib import Path
 from loguru import logger
 import pandas as pd
+import sys
 import xml.etree.ElementTree as ET
 from lxml import etree
 
@@ -134,7 +135,8 @@ class Instat(BaseModel):
         with open(file_path, 'w', encoding='utf-8') as file:
             file.write(modified_content)
 
-    def validate_xml(self, xml_file:Path, xsd_file=Path(r"xsd_valide.xsd")):
+    def validate_xml(self, xml_file:Path):
+        xsd_file=self.resource_path("xsd_valide.xsd")
         # Parse the XSD schema file
         with open(xsd_file, 'r') as schema_file:
             schema_root = etree.parse(schema_file)
@@ -153,3 +155,8 @@ class Instat(BaseModel):
             logger.error("XML is not valid. Errors:")
             for error in xmlschema.error_log:
                 logger.error(error)
+
+    def resource_path(self, relative_path: str) -> Path:
+        """Get path to resource inside or outside of PyInstaller bundle"""
+        base_path = Path(sys._MEIPASS) if hasattr(sys, '_MEIPASS') else Path.cwd()
+        return base_path / relative_path
