@@ -1,4 +1,10 @@
 from pathlib import Path
+import sys
+import argparse
+
+import pandas as pd
+from loguru import logger
+
 from article_info import Article_Info
 from ivivi_facture_reader import IviviFactureReader
 from jessy_facture_reader import JessyFactureReader
@@ -6,17 +12,15 @@ from dolvika_facture_reader import DolvikaFactureReader
 from mod_facture_reader import ModFactureReader
 from sarl_zhc_facture_reader import SarlZhcFactureReader
 from zhc_facture_reader import ZhcFactureReader
-from loguru import logger
-import pandas as pd
-import sys
+
 
 func_mapping = {
     "IVIVI": IviviFactureReader,
-    "Jessy & co": JessyFactureReader,
+    "JESSY": JessyFactureReader,
     "DOLVIKA": DolvikaFactureReader,
-    "MODE CMD": ModFactureReader,
-    "SARL ZHC": SarlZhcFactureReader,
-    "Z.H.C": ZhcFactureReader,
+    "MODE_CMD": ModFactureReader,
+    "SARL_ZHC": SarlZhcFactureReader,
+    "ZHC": ZhcFactureReader,
 }
 
 def detect_company_from_folder(path: Path) -> str:
@@ -28,7 +32,15 @@ def detect_company_from_folder(path: Path) -> str:
 
 
 def main():
-    working_dir = Path.cwd()
+    parser = argparse.ArgumentParser(description="Invoice batch processor")
+    parser.add_argument(
+        "-p", "--path",
+        type=Path,
+        default=Path.cwd(),
+        help="Working folder containing input/output folders and Excel file (default: current folder)"
+    )
+    args = parser.parse_args()
+    working_dir = args.path.resolve()
     input_path = working_dir
     output_path = working_dir / "output"
     excel_path = working_dir / "DONNEES DOUANE PYTHON.xlsx"
