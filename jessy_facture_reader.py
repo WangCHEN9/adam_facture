@@ -225,6 +225,7 @@ class JessyFactureReader:
             return input_list[:target_length]
             
     def _get_dest_code(self, tva:str, dest_country:str) -> str:
+        output = None
         if tva:
             chars_only = re.match(r'^[A-Za-z]+', tva)
             if chars_only:
@@ -271,6 +272,9 @@ class JessyFactureReader:
                 self._pages_to_double_check.append(data["page_number"])
                 continue
             invoicedAmount=round(data["Montant HT"] * (1 - data["% REM"]/100))
+            if not self._get_dest_code(data["N° TVA"], data["dest_country"]):
+                self._pages_to_double_check.append(data["page_number"])
+                continue
             item = Item_unit(
                 itemNumber=item_number,
                 CN8=cn8,

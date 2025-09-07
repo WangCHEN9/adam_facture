@@ -19,7 +19,7 @@ if __name__ == "__main__":
     article_info = Article_Info(source_excel=article_info_excel)
 
     # pdf_path = Path(r"input/DOLVIKA S4FW.pdf")
-    pdf_path = Path(r"input/Facture - 962600 - jessy-2025-06.pdf")
+    pdf_path = Path(r"input/JESSY & Co L5B7 0825.pdf")
     # pdf_path = Path(r"input/zhc.pdf")
     log_file_path = output_folder_path / "log" / f"{pdf_path.stem}.log"
     if log_file_path.exists():
